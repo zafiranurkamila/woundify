@@ -1,0 +1,13 @@
+com\woundify\AiPrediction.class
+com\woundify\CreatePatientRequest.class
+com\woundify\WoundifyStore$LabRecord.class
+com\woundify\WoundifyStore$PatientRecord.class
+com\woundify\AiAnalysisRequest.class
+com\woundify\LoginRequest.class
+com\woundify\LabResultRequest.class
+com\woundify\PatientResponse.class
+com\woundify\LabResultResponse.class
+com\woundify\ApiController.class
+com\woundify\LoginResponse.class
+com\woundify\DashboardSummary.class
+com\woundify\WoundifyStore.class

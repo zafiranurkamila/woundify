@@ -1,0 +1,14 @@
+File: backend/pom.xml
+
+- Parent: org.springframework.boot:spring-boot-starter-parent:3.3.0
+- java.version property: 17
+- No explicit maven-compiler-plugin configuration found in POM (uses parent-managed plugin)
+- Direct dependencies:
+  - org.springframework.boot:spring-boot-starter-web
+  - org.springframework.boot:spring-boot-starter-validation
+  - org.springframework.boot:spring-boot-starter-test (test scope)
+
+Notes:
+- Spring Boot 3.3.0 supports Java 17+ (Java 17 and Java 21 are generally supported). Bumping the Java runtime to Java 21 is likely compatible with this SB version, but the user must pick the target LTS.
+- No obvious legacy `javax.*` artifacts are declared in dependencies; javax→jakarta migration not required here.
+- If target Java >17 is chosen, verify build plugins (compiler, surefire) and any CI/docker images; update `java.version` property accordingly.

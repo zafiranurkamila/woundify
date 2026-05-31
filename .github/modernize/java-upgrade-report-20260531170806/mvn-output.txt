@@ -1,0 +1,23 @@
+Partial Maven build output captured (see full log if available):
+
+Picked up JAVA_TOOL_OPTIONS: -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8
+[INFO] Error stacktraces are turned on.
+[INFO] Scanning for projects...
+[INFO]
+[INFO] -------------------< com.woundify:woundify-backend >--------------------
+[INFO] Building Woundify Backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- resources:3.3.1:resources (default-resources) @ woundify-backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 3 resources from src\main\resources to target\classes
+[INFO]
+[INFO] --- compiler:3.13.0:compile (default-compile) @ woundify-backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 3 source files with javac [debug parameters release 17] to target\classes
+
+Resulting artifact:
+- backend/target/woundify-backend-0.0.1-SNAPSHOT.jar
+
+Note: The captured log truncated early, but the `target` folder and jar are present, indicating a successful package run in this environment.
