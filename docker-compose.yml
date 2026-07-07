@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: woundify-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-woundify}
+      POSTGRES_USER: ${DB_USER:-woundify}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-woundify}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-woundify}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - woundify-network
+
+  # Python FastAPI AI Engine
+  ai-engine:
+    build:
+      context: ./woundify-ai
+      dockerfile: Dockerfile
+    container_name: woundify-ai
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    networks:
+      - woundify-network
+    restart: unless-stopped
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./woundify-backend
+      dockerfile: Dockerfile
+    container_name: woundify-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-woundify}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-woundify}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-woundify}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${JPA_DDL:-update}
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-engine:
+        condition: service_started
+    networks:
+      - woundify-network
+    restart: unless-stopped
+
+networks:
+  woundify-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
