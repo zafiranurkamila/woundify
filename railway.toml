@@ -1,7 +1,0 @@
-[build]
-builder = "dockerfile"
-dockerfilePath = "woundify-backend/Dockerfile"
-buildContext = "woundify-backend"
-
-[deploy]
-startCommand = "java -jar /app/app.jar"
