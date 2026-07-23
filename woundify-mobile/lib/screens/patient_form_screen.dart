@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api_service.dart';
+import '../utils/notification_helper.dart';
 
 class PatientFormScreen extends StatefulWidget {
   const PatientFormScreen({Key? key}) : super(key: key);
@@ -54,15 +55,19 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pasien berhasil didaftarkan!')),
+        NotificationHelper.success(
+          context,
+          'Pasien ${_nameController.text.trim()} berhasil didaftarkan.',
+          title: 'Pasien Terdaftar',
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Pendaftaran gagal: ${e.toString()}')),
+        NotificationHelper.error(
+          context,
+          'Pendaftaran gagal: ${e.toString()}',
+          title: 'Gagal Mendaftarkan',
         );
       }
     } finally {

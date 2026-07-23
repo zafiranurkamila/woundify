@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../api_service.dart';
+import '../utils/notification_helper.dart';
 import 'patient_form_screen.dart';
 import 'lab_input_screen.dart';
 import 'patient_detail_screen.dart';
@@ -55,6 +56,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openAddPatient() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PatientFormScreen()),
+    ).then((result) {
+      if (result == true && mounted) {
+        NotificationHelper.success(context, 'Pasien baru berhasil ditambahkan ke daftar.', title: 'Pasien Terdaftar');
+      }
+      _fetchPatients();
+    });
+  }
+
   void _fetchImpactSummary() async {
     try {
       final summary = await _apiService.getImpactSummary();
@@ -75,6 +88,115 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup', style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotificationPanel() {
+    final hasHighRisk = _impactSummary != null && _impactSummary!.highRiskCasesDetected > 0;
+    final hasLowConf = _impactSummary != null && _impactSummary!.lowConfidenceCasesFlaggedForCulture > 0;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Notifikasi',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 14),
+            if (!hasHighRisk && !hasLowConf)
+              _notifItem(
+                icon: Icons.check_circle_outline_rounded,
+                color: const Color(0xFF16A34A),
+                title: 'Semua aman',
+                subtitle: 'Tidak ada kasus yang perlu perhatian segera.',
+              )
+            else ...[
+              if (hasHighRisk)
+                _notifItem(
+                  icon: Icons.warning_amber_rounded,
+                  color: const Color(0xFFDC2626),
+                  title: '${_impactSummary!.highRiskCasesDetected} Kasus Risiko Tinggi',
+                  subtitle: 'Pasien dengan infeksi berisiko komplikasi serius perlu segera ditinjau.',
+                ),
+              if (hasHighRisk && hasLowConf) const SizedBox(height: 10),
+              if (hasLowConf)
+                _notifItem(
+                  icon: Icons.science_outlined,
+                  color: const Color(0xFFD97706),
+                  title: '${_impactSummary!.lowConfidenceCasesFlaggedForCulture} Kasus Keyakinan Rendah',
+                  subtitle: 'AI mendeteksi ketidakpastian identifikasi bakteri. Konfirmasi kultur disarankan.',
+                ),
+            ],
+            const SizedBox(height: 16),
+            _notifItem(
+              icon: Icons.people_outline_rounded,
+              color: const Color(0xFF1E88E5),
+              title: '${_impactSummary?.totalPatientsScreened ?? _patients.length} Total Pasien',
+              subtitle: 'Terdaftar dalam sistem Woundify.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _notifItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: color)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4)),
+              ],
+            ),
           ),
         ],
       ),
@@ -240,7 +362,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           // Notification bell
           Container(
-            margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(12),
@@ -251,12 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded, size: 22),
                   color: const Color(0xFF64748B),
-                  onPressed: () => _showInfoDialog(
-                    'Notifikasi',
-                    _impactSummary != null && _impactSummary!.highRiskCasesDetected > 0
-                        ? 'Ada ${_impactSummary!.highRiskCasesDetected} kasus risiko komplikasi tinggi yang perlu ditinjau.'
-                        : 'Belum ada notifikasi baru.',
-                  ),
+                  onPressed: _showNotificationPanel,
                 ),
                 if (_impactSummary != null && _impactSummary!.highRiskCasesDetected > 0)
                   Positioned(
@@ -269,19 +385,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
               ],
-            ),
-          ),
-          // Logout
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.logout_rounded, size: 22),
-              color: const Color(0xFF64748B),
-              onPressed: _handleLogout,
-              tooltip: 'Keluar',
             ),
           ),
         ],
@@ -339,10 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PatientFormScreen()),
-              ).then((_) => _fetchPatients()),
+              onPressed: _openAddPatient,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF1E88E5),
@@ -485,10 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Pasien Baru',
               color: const Color(0xFF1E88E5),
               bgColor: const Color(0xFFE3F2FD),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PatientFormScreen()),
-              ).then((_) => _fetchPatients()),
+              onTap: _openAddPatient,
             ),
             _buildFeatureIcon(
               icon: Icons.document_scanner_rounded,
@@ -498,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const LabInputScreen()),
-              ),
+              ).then((_) => _fetchPatients()),
             ),
             _buildFeatureIcon(
               icon: Icons.map_rounded,
@@ -693,13 +790,34 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           Wrap(
                             spacing: 6,
                             runSpacing: 6,
                             children: [
                               _miniChip(Icons.medical_information_outlined, patient.diabetesType.replaceAll('_', ' '), const Color(0xFFE65100), const Color(0xFFFFF3E0)),
                               _miniChip(Icons.person_outline_rounded, patient.createdByName, const Color(0xFF43A047), const Color(0xFFE8F5E9)),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Icon(Icons.cake_outlined, size: 12, color: const Color(0xFF94A3B8)),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  '${patient.birthDate.day}/${patient.birthDate.month}/${patient.birthDate.year}',
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E88E5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text('Lihat', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+                              ),
                             ],
                           ),
                         ],
@@ -1233,7 +1351,7 @@ class _HomeScreenState extends State<HomeScreen> {
           currentIndex: _currentNavIndex < 2 ? _currentNavIndex : 3,
           onTap: (index) {
             if (index == 2) {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const LabInputScreen()));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const LabInputScreen())).then((_) => _fetchPatients());
               return;
             }
             setState(() => _currentNavIndex = index == 3 ? 2 : index);

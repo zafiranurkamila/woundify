@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import '../models.dart';
+import '../services/pdf_report_service.dart';
+import '../utils/notification_helper.dart';
 
 class PredictionResultScreen extends StatelessWidget {
   final LabResult labResult;
@@ -69,6 +71,21 @@ class PredictionResultScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         foregroundColor: const Color(0xFF1E88E5),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            tooltip: 'Bagikan Laporan PDF',
+            onPressed: () async {
+              try {
+                await PdfReportService.shareReport(labResult);
+              } catch (e) {
+                if (context.mounted) {
+                  NotificationHelper.error(context, 'Gagal membuat laporan PDF: $e', title: 'PDF Gagal Dibuat');
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -352,7 +369,34 @@ class PredictionResultScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+
+            // Export PDF button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    await PdfReportService.shareReport(labResult);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Gagal membuat laporan PDF: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.picture_as_pdf_rounded),
+                label: const Text('Unduh / Bagikan Laporan PDF', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E88E5),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             // Back button
             SizedBox(

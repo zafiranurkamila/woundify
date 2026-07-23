@@ -18,7 +18,10 @@ public class EpidemiologyData {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // EAGER: this entity is always returned directly as JSON (no DTO mapping),
+    // and the Spring Security session is open-in-view=false, so a LAZY proxy
+    // here throws LazyInitializationException once the controller serializes it.
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "bacterial_profile_id", nullable = false)
     private BacterialProfile bacterialProfile;
 

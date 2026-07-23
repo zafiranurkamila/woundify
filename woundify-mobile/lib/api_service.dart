@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.36.52.220:8080'; // Change to server IP for device testing
+  static const String baseUrl = 'http://10.36.51.174:8080'; // Change to server IP for device testing
   String? _token;
 
   Future<Map<String, String>> _getHeaders() async {

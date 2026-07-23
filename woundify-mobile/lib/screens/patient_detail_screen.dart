@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api_service.dart';
 import '../models.dart';
+import '../utils/notification_helper.dart';
 import 'lab_input_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
@@ -76,9 +77,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat detail pasien: $e')),
-      );
+      NotificationHelper.error(context, 'Gagal memuat detail pasien: $e', title: 'Error Memuat Data');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -99,9 +98,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   Future<void> _openReferralDialog() async {
     if (_doctors.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dokter belum tersedia untuk dirujuk.')),
-      );
+      NotificationHelper.warning(context, 'Dokter belum tersedia untuk dirujuk.', title: 'Tidak Ada Dokter');
       return;
     }
 
@@ -187,12 +184,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                           ? null
                           : () async {
                               if (reasonController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Alasan rujukan wajib diisi.'),
-                                  ),
-                                );
+                                NotificationHelper.warning(context, 'Alasan rujukan wajib diisi.', title: 'Form Tidak Lengkap');
                                 return;
                               }
                               Navigator.pop(context, true);
@@ -219,17 +211,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         clinicalNotes: noteController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rujukan berhasil diajukan dan menunggu verifikasi dokter.'),
-        ),
-      );
+      NotificationHelper.success(context, 'Rujukan berhasil diajukan dan menunggu verifikasi dokter.', title: 'Rujukan Dikirim');
       await _loadData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal ajukan rujukan: $e')),
-      );
+      NotificationHelper.error(context, 'Gagal ajukan rujukan: $e', title: 'Gagal Mengirim Rujukan');
     } finally {
       if (mounted) {
         setState(() => _isSubmittingReferral = false);
@@ -274,15 +260,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         verificationNote: noteController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verifikasi rujukan berhasil disimpan.')),
-      );
+      NotificationHelper.success(context, 'Verifikasi rujukan berhasil disimpan.', title: 'Rujukan Diverifikasi');
       await _loadData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal verifikasi rujukan: $e')),
-      );
+      NotificationHelper.error(context, 'Gagal verifikasi rujukan: $e', title: 'Gagal Verifikasi');
     }
   }
 
@@ -418,15 +400,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         notes: noteController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tindak lanjut berhasil dicatat.')),
-      );
+      NotificationHelper.success(context, 'Tindak lanjut luka berhasil dicatat.', title: 'Tindak Lanjut Tersimpan');
       await _loadData();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mencatat tindak lanjut: $e')),
-      );
+      NotificationHelper.error(context, 'Gagal mencatat tindak lanjut: $e', title: 'Gagal Menyimpan');
     } finally {
       if (mounted) {
         setState(() => _isSubmittingFollowUp = false);
@@ -679,14 +657,22 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     indicator: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 1)),
+                      ],
                     ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorPadding: const EdgeInsets.all(3),
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
                     labelColor: const Color(0xFF1E88E5),
                     unselectedLabelColor: const Color(0xFF64748B),
+                    labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.2),
+                    unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.2),
                     tabs: const [
-                      Tab(text: 'Ringkasan'),
-                      Tab(text: 'Lab & Obat'),
-                      Tab(text: 'Rujukan'),
-                      Tab(text: 'Tindak Lanjut'),
+                      Tab(child: Text('Ringkasan', textAlign: TextAlign.center, softWrap: true)),
+                      Tab(child: Text('Lab & Obat', textAlign: TextAlign.center, softWrap: true)),
+                      Tab(child: Text('Rujukan', textAlign: TextAlign.center, softWrap: true)),
+                      Tab(child: Text('Tindak Lanjut', textAlign: TextAlign.center, softWrap: true)),
                     ],
                   ),
                 ),
@@ -855,4 +841,230 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               else
                 ..._labHistory.map(
                   (lab) => Container(
-                    margin
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _formatDateTime(lab.createdAt),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          lab.cultureResult.isEmpty
+                              ? 'Kultur: -'
+                              : 'Kultur: ${lab.cultureResult}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text('Gram: ${lab.gramStain}'),
+                        if (lab.prediction != null)
+                          Text(
+                            'Prediksi AI: ${lab.prediction!.predictedBacteria}',
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReferralTab() {
+    final pendingForDoctor = _referrals
+        .where((r) =>
+            r.targetDoctorId == widget.currentUser.id &&
+            r.status.toUpperCase() == 'PENDING')
+        .toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (!_isDoctor)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSubmittingReferral ? null : _openReferralDialog,
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Ajukan Rujukan Ke Dokter'),
+            ),
+          ),
+        if (!_isDoctor) const SizedBox(height: 12),
+        _buildWhiteCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isDoctor ? 'Rujukan Masuk Untuk Anda' : 'Riwayat Rujukan Pasien',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 10),
+              if (_referrals.isEmpty)
+                const Text(
+                  'Belum ada rujukan untuk pasien ini.',
+                  style: TextStyle(color: Color(0xFF64748B)),
+                )
+              else
+                ..._referrals.map(
+                  (referral) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                referral.targetDoctorName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            ),
+                            _statusChip(referral.status),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text('Alasan: ${referral.reason}'),
+                        if (referral.clinicalNotes.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text('Catatan: ${referral.clinicalNotes}'),
+                          ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Diajukan oleh ${referral.requestedByName} • ${_formatDateTime(referral.requestedAt)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        if (referral.verificationNote.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Catatan verifikasi: ${referral.verificationNote}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        if (_isDoctor &&
+                            referral.targetDoctorId == widget.currentUser.id &&
+                            referral.status.toUpperCase() == 'PENDING')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () =>
+                                        _verifyReferral(referral, false),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFC62828),
+                                      side: const BorderSide(
+                                        color: Color(0xFFC62828),
+                                      ),
+                                    ),
+                                    child: const Text('Tolak'),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () =>
+                                        _verifyReferral(referral, true),
+                                    child: const Text('Setujui'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_isDoctor && pendingForDoctor.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Tidak ada rujukan pending untuk diverifikasi.',
+                    style: TextStyle(color: Color(0xFF64748B)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWhiteCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _dataRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

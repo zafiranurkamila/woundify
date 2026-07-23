@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api_service.dart';
 import '../models.dart';
+import '../utils/notification_helper.dart';
 
 class DoctorReferralInboxScreen extends StatefulWidget {
   final User currentUser;
@@ -35,9 +36,7 @@ class _DoctorReferralInboxScreenState extends State<DoctorReferralInboxScreen> {
       setState(() => _incoming = list);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal mengambil rujukan masuk: $e')),
-      );
+      NotificationHelper.error(context, 'Gagal mengambil rujukan masuk: $e', title: 'Gagal Memuat');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -82,15 +81,11 @@ class _DoctorReferralInboxScreenState extends State<DoctorReferralInboxScreen> {
         verificationNote: noteController.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verifikasi tersimpan.')),
-      );
+      NotificationHelper.success(context, 'Verifikasi rujukan berhasil disimpan.', title: 'Rujukan Diverifikasi');
       _loadReferrals();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal verifikasi: $e')),
-      );
+      NotificationHelper.error(context, 'Gagal verifikasi rujukan: $e', title: 'Gagal Verifikasi');
     }
   }
 

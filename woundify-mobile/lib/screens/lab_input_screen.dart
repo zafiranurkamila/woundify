@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import '../api_service.dart';
+import '../utils/notification_helper.dart';
 import 'prediction_result_screen.dart';
 
 class LabInputScreen extends StatefulWidget {
@@ -182,13 +183,9 @@ class _LabInputScreenState extends State<LabInputScreen> {
       });
       _saveDraft();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OCR Selesai! Parameter berhasil diisi.')),
-      );
+      NotificationHelper.success(context, 'Parameter lab berhasil diisi dari foto.', title: 'OCR Selesai');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memproses OCR: ${e.toString()}')),
-      );
+      NotificationHelper.error(context, 'Gagal memproses OCR: ${e.toString()}', title: 'OCR Gagal');
     } finally {
       setState(() => _isOcrLoading = false);
     }
@@ -206,9 +203,7 @@ class _LabInputScreenState extends State<LabInputScreen> {
 
   void _submitAnalysis() async {
     if (_selectedPatient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap pilih pasien terlebih dahulu.')),
-      );
+      NotificationHelper.warning(context, 'Harap pilih pasien terlebih dahulu.', title: 'Pasien Belum Dipilih');
       return;
     }
 
@@ -255,9 +250,7 @@ class _LabInputScreenState extends State<LabInputScreen> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Analisis gagal: ${e.toString()}')),
-      );
+      NotificationHelper.error(context, 'Analisis gagal: ${e.toString()}', title: 'Gagal Menyimpan Hasil Lab');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

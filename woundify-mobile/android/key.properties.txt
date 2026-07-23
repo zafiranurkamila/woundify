@@ -1,0 +1,4 @@
+storePassword=Woundify2024@Secure
+keyPassword=Woundify2024@Secure
+keyAlias=woundify-key
+storeFile=app/release.keystore
