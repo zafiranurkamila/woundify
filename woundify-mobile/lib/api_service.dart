@@ -49,7 +49,7 @@ class ApiService {
     }
   }
 
-  Future<void> register(String email, String password, String name, String role) async {
+  Future<User> register(String email, String password, String name, String role) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -61,8 +61,36 @@ class ApiService {
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 200) {
+      return User.fromJson(jsonDecode(response.body));
+    } else {
       throw Exception('Registration failed: ${response.body}');
+    }
+  }
+
+  Future<void> sendOtp(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/send-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send OTP: ${response.body}');
+    }
+  }
+
+  Future<User> verifyOtp(String email, String code) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/verify-otp'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'code': code}),
+    );
+
+    if (response.statusCode == 200) {
+      return User.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('OTP verification failed: ${response.body}');
     }
   }
 

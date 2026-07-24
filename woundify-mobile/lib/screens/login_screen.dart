@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import 'home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -215,27 +216,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
                       TextButton(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              backgroundColor: Colors.white,
-                              title: const Text('Catatan Registrasi', style: TextStyle(color: Color(0xFF1E293B), fontWeight: FontWeight.bold)),
-                              content: const Text(
-                                'Untuk membuat akun baru, silakan hubungi administrator sistem.',
-                                style: TextStyle(color: Color(0xFF64748B)),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('OK', style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.bold)),
-                                )
-                              ],
-                            ),
-                          );
-                        },
-                        child: const Text('Belum punya akun? Hubungi Admin', style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.w600)),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (context) => RegisterScreen()),
+                        ),
+                        child: const Text('Belum punya akun? Daftar', style: TextStyle(color: Color(0xFF1E88E5), fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
