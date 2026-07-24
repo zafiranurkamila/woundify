@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for network access in release builds. Without this, release
+         APKs fail every request with "Failed host lookup" (debug builds work
+         because Flutter injects INTERNET via the debug manifest). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="woundify_mobile"
         android:name="${applicationName}"
