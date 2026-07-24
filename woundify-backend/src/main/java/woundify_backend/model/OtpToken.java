@@ -1,43 +1,33 @@
 package woundify_backend.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "otp_tokens")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class OtpToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @NotBlank
-    @Email
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @NotBlank
     @Column(nullable = false)
-    private String password;
+    private String code;
 
-    @NotBlank
     @Column(nullable = false)
-    private String name;
+    private LocalDateTime expiresAt;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role;
-
-    @Column(name = "is_verified", nullable = false)
-    private boolean isVerified = false;
+    private boolean used = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -47,10 +37,7 @@ public class User {
         createdAt = LocalDateTime.now();
     }
 
-    public enum Role {
-        ADMIN,
-        DOCTOR,
-        HEALTH_PROFESSIONAL,
-        NURSE
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(expiresAt);
     }
 }

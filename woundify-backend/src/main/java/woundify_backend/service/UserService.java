@@ -24,11 +24,13 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final OtpService otpService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider, OtpService otpService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
+        this.otpService = otpService;
     }
 
     @Override
@@ -60,14 +62,29 @@ public class UserService implements UserDetailsService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .role(role)
+                .isVerified(false)
                 .build();
 
+        User savedUser = userRepository.save(user);
+        otpService.sendOtp(request.getEmail());
+        return savedUser;
+    }
+
+    public User verifyEmail(String email, String otpCode) {
+        otpService.verifyOtp(email, otpCode);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setVerified(true);
         return userRepository.save(user);
     }
 
     public AuthResponse login(AuthRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+
+        if (!user.isVerified()) {
+            throw new RuntimeException("Email belum diverifikasi. Silakan cek email Anda untuk kode OTP.");
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
