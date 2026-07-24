@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://woundify-production.up.railway.app'; // Change to server IP for device testing
+  static const String baseUrl = 'https://woundify-production.up.railway.app'; // Railway serves HTTPS; http:// is blocked by Android cleartext policy
   String? _token;
 
   Future<Map<String, String>> _getHeaders() async {
