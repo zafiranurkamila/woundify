@@ -1,25 +1,38 @@
 package woundify_backend.service;
 
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import woundify_backend.dto.SendOtpRequest;
-import woundify_backend.dto.VerifyOtpRequest;
+import org.springframework.web.client.RestTemplate;
 import woundify_backend.model.OtpToken;
 import woundify_backend.repository.OtpTokenRepository;
+
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Service
 public class OtpService {
 
     private final OtpTokenRepository otpTokenRepository;
-    private final JavaMailSender mailSender;
+    private final RestTemplate restTemplate = new RestTemplate();
     private static final int OTP_VALIDITY_MINUTES = 10;
+    private static final String BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
-    public OtpService(OtpTokenRepository otpTokenRepository, JavaMailSender mailSender) {
+    @Value("${brevo.api-key:}")
+    private String brevoApiKey;
+
+    @Value("${brevo.sender-email:woundifyme@gmail.com}")
+    private String senderEmail;
+
+    @Value("${brevo.sender-name:Woundify}")
+    private String senderName;
+
+    public OtpService(OtpTokenRepository otpTokenRepository) {
         this.otpTokenRepository = otpTokenRepository;
-        this.mailSender = mailSender;
     }
 
     public void sendOtp(String email) {
@@ -56,16 +69,31 @@ public class OtpService {
         return String.format("%06d", new Random().nextInt(1000000));
     }
 
+    /**
+     * Sends the OTP via Brevo's HTTP API (port 443) instead of SMTP, because
+     * Railway blocks outbound SMTP ports (25/465/587).
+     */
     private void sendOtpEmail(String email, String code) {
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            throw new RuntimeException("BREVO_API_KEY belum diset di environment Railway");
+        }
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("noreply@woundify.com");
-            message.setTo(email);
-            message.setSubject("Kode OTP Woundify - Verifikasi Email");
-            message.setText("Kode OTP Anda: " + code + "\n\nKode ini berlaku selama 10 menit.");
-            mailSender.send(message);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", brevoApiKey);
+            headers.set("accept", "application/json");
+
+            Map<String, Object> body = Map.of(
+                    "sender", Map.of("name", senderName, "email", senderEmail),
+                    "to", List.of(Map.of("email", email)),
+                    "subject", "Kode OTP Woundify - Verifikasi Email",
+                    "textContent", "Kode OTP Anda: " + code + "\n\nKode ini berlaku selama 10 menit."
+            );
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity(BREVO_ENDPOINT, request, String.class);
         } catch (Exception e) {
-            throw new RuntimeException("Gagal mengirim OTP: " + e.getMessage());
+            throw new RuntimeException("Gagal mengirim OTP via Brevo: " + e.getMessage());
         }
     }
 }
