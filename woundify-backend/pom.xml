@@ -99,6 +99,11 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
+							<!-- Fork a separate javac process. Running javac in-process
+							     (the plugin default) corrupts the shared name table when
+							     Lombok patches it, crashing with
+							     "Cannot load from object array because this.hashes is null". -->
+							<fork>true</fork>
 							<annotationProcessorPaths>
 								<path>
 									<groupId>org.projectlombok</groupId>
