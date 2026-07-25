@@ -84,20 +84,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const SizedBox(height: 12),
-                      Image.asset('assets/logo.png', height: 120, errorBuilder: (context, error, stackTrace) => const Icon(Icons.healing_rounded, size: 120, color: Color(0xFF1E88E5))),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'WOUNDIFY',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E88E5),
-                          letterSpacing: 1.2,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+                      Image.asset('assets/logo.png', height: 190, errorBuilder: (context, error, stackTrace) => const Icon(Icons.healing_rounded, size: 160, color: Color(0xFF1E88E5))),
+                      const SizedBox(height: 20),
                       const Text(
                         'Selamat Datang',
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
