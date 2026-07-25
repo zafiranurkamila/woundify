@@ -25,6 +25,9 @@ public class PatientController {
 
     @PostMapping
     public ResponseEntity<PatientResponse> createPatient(@RequestBody PatientRequest request, Principal principal) {
+        if (principal == null) {
+            throw new RuntimeException("Sesi tidak valid. Silakan login ulang.");
+        }
         User currentUser = userService.findByEmail(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
         return ResponseEntity.ok(patientService.createPatient(request, currentUser));
