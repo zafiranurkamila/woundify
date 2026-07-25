@@ -41,14 +41,14 @@ public class OtpService {
         String code = generateOtpCode();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES);
 
-        OtpToken otp = OtpToken.builder()
-                .email(email)
-                .code(code)
-                .expiresAt(expiresAt)
-                .used(false)
-                .build();
-
-        otpTokenRepository.deleteByEmail(email);
+        // Reuse the existing row for this email (email is unique) instead of
+        // delete-then-insert, which fails on the unique constraint because
+        // Hibernate orders the INSERT before the DELETE within one transaction.
+        OtpToken otp = otpTokenRepository.findByEmail(email).orElseGet(OtpToken::new);
+        otp.setEmail(email);
+        otp.setCode(code);
+        otp.setExpiresAt(expiresAt);
+        otp.setUsed(false);
         otpTokenRepository.save(otp);
 
         sendOtpEmail(email, code);
