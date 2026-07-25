@@ -54,6 +54,14 @@ class User {
       token: token ?? json['token'],
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'email': email,
+        'name': name,
+        'role': role,
+        'token': token,
+      };
 }
 
 class Patient {

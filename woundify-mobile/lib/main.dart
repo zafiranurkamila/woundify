@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'api_service.dart';
+import 'models.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +45,21 @@ class WoundifyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: FutureBuilder<User?>(
+        future: ApiService().getSavedUser(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: Color(0xFFF4F6F9),
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final user = snapshot.data;
+          return user != null
+              ? HomeScreen(currentUser: user)
+              : const LoginScreen();
+        },
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

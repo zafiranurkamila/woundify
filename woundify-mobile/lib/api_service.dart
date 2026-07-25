@@ -25,10 +25,27 @@ class ApiService {
     await prefs.setString('auth_token', token);
   }
 
+  Future<void> _saveUser(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_user', jsonEncode(user.toJson()));
+  }
+
+  /// Restores the logged-in user from storage (for auto-login on app start).
+  /// Returns null if there is no saved session.
+  Future<User?> getSavedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final userStr = prefs.getString('auth_user');
+    if (token == null || userStr == null) return null;
+    _token = token;
+    return User.fromJson(jsonDecode(userStr), token: token);
+  }
+
   Future<void> logout() async {
     _token = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    await prefs.remove('auth_user');
   }
 
   // --- AUTHENTICATION ---
@@ -43,6 +60,7 @@ class ApiService {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final user = User.fromJson(data);
       await _saveToken(user.token!);
+      await _saveUser(user);
       return user;
     } else {
       throw Exception('Login failed: ${response.body}');
