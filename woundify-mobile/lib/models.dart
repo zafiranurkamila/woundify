@@ -348,6 +348,38 @@ class ReferralRecord {
   }
 }
 
+class ChatMessage {
+  final String id;
+  final String senderId;
+  final String senderName;
+  final String recipientId;
+  final String recipientName;
+  final String content;
+  final DateTime? sentAt;
+
+  ChatMessage({
+    required this.id,
+    required this.senderId,
+    required this.senderName,
+    required this.recipientId,
+    required this.recipientName,
+    required this.content,
+    this.sentAt,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    return ChatMessage(
+      id: json['id']?.toString() ?? '',
+      senderId: json['senderId']?.toString() ?? '',
+      senderName: json['senderName'] ?? '',
+      recipientId: json['recipientId']?.toString() ?? '',
+      recipientName: json['recipientName'] ?? '',
+      content: json['content'] ?? '',
+      sentAt: json['sentAt'] != null ? DateTime.tryParse(json['sentAt']) : null,
+    );
+  }
+}
+
 class AvailabilitySlot {
   final String id;
   final String doctorId;

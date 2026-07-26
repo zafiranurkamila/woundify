@@ -10,6 +10,7 @@ import 'validation_analytics_screen.dart';
 import 'login_screen.dart';
 import 'doctor_referral_inbox_screen.dart';
 import 'profile_schedule_screen.dart';
+import 'chat_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User currentUser;
@@ -407,6 +408,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+          // Chat
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
+              color: const Color(0xFF1E88E5),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatListScreen(currentUser: widget.currentUser),
+                ),
+              ),
             ),
           ),
           // Notification bell

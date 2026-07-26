@@ -324,6 +324,31 @@ class ApiService {
     }
   }
 
+  // --- CHAT ---
+  Future<ChatMessage> sendMessage(String recipientId, String content) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/chat/send'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'recipientId': recipientId, 'content': content}),
+    );
+    if (response.statusCode == 200) {
+      return ChatMessage.fromJson(jsonDecode(response.body));
+    }
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal mengirim pesan'));
+  }
+
+  Future<List<ChatMessage>> getConversation(String peerId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/chat/conversation/$peerId'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> list = jsonDecode(response.body);
+      return list.map((j) => ChatMessage.fromJson(j)).toList();
+    }
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memuat percakapan'));
+  }
+
   Future<List<ReferralRecord>> getPatientReferrals(String patientId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/referrals/patient/$patientId'),
