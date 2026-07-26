@@ -116,18 +116,16 @@ def calculate_cronbach_alpha(matrix: List[List[float]]) -> Dict[str, Any]:
     df = pd.DataFrame(matrix)
     k = df.shape[1]
     if k <= 1:
-        return {"error": "Scale must contain more than 1 item.", "alpha": 0.0}
-        
+        return {"error": "Skala harus memiliki lebih dari 1 item pertanyaan."}
+    if df.shape[0] < 2:
+        return {"error": "Minimal 2 responden diperlukan untuk uji reliabilitas."}
+
     item_vars = df.var(ddof=1)
     total_scores = df.sum(axis=1)
     total_var = total_scores.var(ddof=1)
-    
+
     if total_var == 0:
-        return {
-            "alpha": 0.0,
-            "interpretation": "Invalid: Total variance is 0.",
-            "k_items": k
-        }
+        return {"error": "Semua responden menjawab identik (tidak ada variasi). Masukkan respons yang bervariasi antar responden agar reliabilitas dapat dihitung."}
         
     alpha = (k / (k - 1)) * (1 - (item_vars.sum() / total_var))
     
@@ -158,17 +156,26 @@ def calculate_pearson_validity(matrix: List[List[float]]) -> Dict[str, Any]:
     df = pd.DataFrame(matrix)
     k = df.shape[1]
     total_scores = df.sum(axis=1)
-    
+
+    if df.shape[0] < 3:
+        return {"error": "Minimal 3 responden diperlukan untuk uji validitas."}
+    if float(total_scores.std(ddof=1)) == 0:
+        return {"error": "Semua responden menjawab identik (tidak ada variasi). Masukkan respons yang bervariasi antar responden agar validitas dapat dihitung."}
+
     results = []
-    r_table_df5_p05 = 0.361 # Standard threshold for 30 degrees of freedom, or rough baseline
-    
+
     for i in range(k):
         item_scores = df.iloc[:, i]
-        r_coeff, p_val = stats.pearsonr(item_scores, total_scores)
-        
-        # Calculate dynamic r-table significance check (rough approximation)
-        df_deg = len(item_scores) - 2
-        # Let's say if p-val < 0.05, it is statistically valid
+
+        # Item konstan (tidak ada variasi) -> korelasi tak terdefinisi, tandai tidak valid
+        if float(item_scores.std(ddof=1)) == 0:
+            r_coeff, p_val = 0.0, 1.0
+        else:
+            r_coeff, p_val = stats.pearsonr(item_scores, total_scores)
+            if np.isnan(r_coeff):
+                r_coeff, p_val = 0.0, 1.0
+
+        # Let's say if p-val < 0.05 and r > 0.3, it is statistically valid
         is_valid = bool(p_val < 0.05 and r_coeff > 0.3)
         
         results.append({

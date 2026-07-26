@@ -470,7 +470,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Cronbach alpha computation failed');
+      throw Exception(_extractMessage(response.body, fallback: 'Perhitungan reliabilitas gagal'));
     }
   }
 
@@ -484,7 +484,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Pearson validity computation failed');
+      throw Exception(_extractMessage(response.body, fallback: 'Perhitungan validitas gagal'));
     }
   }
 

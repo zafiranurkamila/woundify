@@ -85,8 +85,25 @@ public class AiIntegrationService {
                 Map.class
             );
             return response.getBody();
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // AI mengembalikan 4xx dengan {"detail":"..."} — ambil isi detail-nya saja
+            String body = e.getResponseBodyAsString();
+            throw new RuntimeException(extractDetail(body));
         } catch (Exception e) {
             throw new RuntimeException("Statistics call failed: " + e.getMessage(), e);
         }
+    }
+
+    /** Mengambil nilai field "detail" dari body JSON error FastAPI tanpa dependensi JSON. */
+    private String extractDetail(String body) {
+        if (body == null) return "Perhitungan statistik gagal.";
+        int idx = body.indexOf("\"detail\"");
+        if (idx < 0) return body;
+        int firstQuote = body.indexOf('"', body.indexOf(':', idx) + 1);
+        int endQuote = firstQuote >= 0 ? body.indexOf('"', firstQuote + 1) : -1;
+        if (firstQuote >= 0 && endQuote > firstQuote) {
+            return body.substring(firstQuote + 1, endQuote);
+        }
+        return body;
     }
 }
