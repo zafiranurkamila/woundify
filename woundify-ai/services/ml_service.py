@@ -17,9 +17,9 @@ BACTERIA_PROFILES = [
     {"name": "Streptococcus pyogenes", "gram_stain": 1, "is_coccus": 1, "indole": 0, "mr": 1, "vp": 0, "citrate": 0, "h2s": 0, "motil": 0, "urease": 0, "macconkey": 0, "emb": 0, "tsi": 3, "nas": 0, "risk": "MEDIUM", "biofilm": "MEDIUM"},
     {"name": "Enterococcus faecalis", "gram_stain": 1, "is_coccus": 1, "indole": 0, "mr": 1, "vp": 1, "citrate": 0, "h2s": 0, "motil": 0, "urease": 0, "macconkey": 0, "emb": 0, "tsi": 3, "nas": 1, "risk": "MEDIUM", "biofilm": "MEDIUM"},
     {"name": "Escherichia coli", "gram_stain": 0, "is_coccus": 0, "indole": 1, "mr": 1, "vp": 0, "citrate": 0, "h2s": 0, "motil": 1, "urease": 0, "macconkey": 1, "emb": 2, "tsi": 0, "nas": 0, "risk": "MEDIUM", "biofilm": "LOW"},
-    {"name": "Pseudomonas aeruginosa", "gram_stain": 0, "is_coccus": 0, "indole": 0, "mr": 0, "vp": 0, "citrate": 1, "h2s": 0, "motil": 1, "urease": 0, "macconkey": 0, "emb": 0, "tsi": 3, "nas": 1, "risk": "HIGH", "biofilm": "HIGH"},
+    {"name": "Pseudomonas aeruginosa", "gram_stain": 0, "is_coccus": 0, "indole": 0, "mr": 0, "vp": 0, "citrate": 1, "h2s": 0, "motil": 1, "urease": 1, "macconkey": 0, "emb": 0, "tsi": 3, "nas": 1, "risk": "HIGH", "biofilm": "HIGH"},
     {"name": "Klebsiella pneumoniae", "gram_stain": 0, "is_coccus": 0, "indole": 0, "mr": 0, "vp": 1, "citrate": 1, "h2s": 0, "motil": 0, "urease": 1, "macconkey": 1, "emb": 1, "tsi": 0, "nas": 0, "risk": "HIGH", "biofilm": "HIGH"},
-    {"name": "Proteus mirabilis", "gram_stain": 0, "is_coccus": 0, "indole": 0, "mr": 1, "vp": 0, "citrate": 1, "h2s": 1, "motil": 1, "urease": 1, "macconkey": 0, "emb": 0, "tsi": 2, "nas": 0, "risk": "MEDIUM", "biofilm": "MEDIUM"}
+    {"name": "Proteus mirabilis", "gram_stain": 0, "is_coccus": 0, "indole": 1, "mr": 1, "vp": 0, "citrate": 1, "h2s": 1, "motil": 1, "urease": 1, "macconkey": 0, "emb": 0, "tsi": 2, "nas": 1, "risk": "MEDIUM", "biofilm": "MEDIUM"}
 ]
 
 FEATURE_NAMES = ["gram_stain", "is_coccus", "indole", "mr", "vp", "citrate", "h2s", "motil", "urease", "macconkey", "emb", "tsi", "nas"]
@@ -209,6 +209,11 @@ class WoundifyMlEngine:
                 "resistant": ["Ampicillin", "Carbenicillin"],
                 "susceptible": ["Meropenem", "Amikacin", "Levofloxacin"],
                 "recommendation": "High risk of ESBL production. Prefer Carbapenems if ESBL-positive. Hydration and systemic review."
+            },
+            "Proteus mirabilis": {
+                "resistant": ["Nitrofurantoin", "Tetracycline", "Colistin"],
+                "susceptible": ["Ceftriaxone", "Gentamicin", "Ciprofloxacin", "Co-trimoxazole"],
+                "recommendation": "Motile urease-producing gram-negative (swarming); watch for secondary urinary tract involvement. Susceptible to 3rd-gen cephalosporins and aminoglycosides. Debridement and glucose control."
             }
         }
         
