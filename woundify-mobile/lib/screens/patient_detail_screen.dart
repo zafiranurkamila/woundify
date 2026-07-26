@@ -35,7 +35,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   List<WoundFollowUp> _followUps = [];
   bool _isSubmittingFollowUp = false;
 
-  bool get _isDoctor => widget.currentUser.role.toUpperCase() == 'DOCTOR';
   LabResult? get _latestLab => _labHistory.isEmpty ? null : _labHistory.first;
 
   @override
