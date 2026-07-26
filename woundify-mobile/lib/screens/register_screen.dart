@@ -12,15 +12,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
+  final _strController = TextEditingController();
   final _apiService = ApiService();
   bool _isLoading = false;
   String _selectedRole = 'NURSE';
+
+  // Pilihan pekerjaan: value = enum backend, label = teks Indonesia
+  static const Map<String, String> _roles = {
+    'NURSE': 'Perawat',
+    'DOCTOR': 'Dokter',
+    'RESEARCHER': 'Peneliti',
+    'LAB_ADMIN': 'Admin Laboratorium',
+    'HOSPITAL_ADMIN': 'Admin Rumah Sakit',
+  };
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
+    _strController.dispose();
     super.dispose();
   }
 
@@ -35,6 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordController.text,
         _nameController.text,
         _selectedRole,
+        strNumber: _selectedRole == 'DOCTOR' ? _strController.text.trim() : null,
       );
 
       if (!mounted) return;
@@ -114,19 +126,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedRole,
-                items: ['NURSE', 'DOCTOR', 'HEALTH_PROFESSIONAL', 'ADMIN']
-                    .map((role) => DropdownMenuItem(
-                          value: role,
-                          child: Text(role),
+                items: _roles.entries
+                    .map((e) => DropdownMenuItem(
+                          value: e.key,
+                          child: Text(e.value),
                         ))
                     .toList(),
                 onChanged: (value) => setState(() => _selectedRole = value!),
                 decoration: InputDecoration(
-                  labelText: 'Role',
+                  labelText: 'Pekerjaan',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.badge),
                 ),
               ),
+              if (_selectedRole == 'DOCTOR') ...[
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _strController,
+                  decoration: InputDecoration(
+                    labelText: 'Nomor STR / SIP',
+                    helperText: 'Wajib untuk verifikasi tenaga medis (Dokter)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.verified_user),
+                  ),
+                  validator: (value) {
+                    if (_selectedRole == 'DOCTOR' && (value?.trim().isEmpty ?? true)) {
+                      return 'Nomor STR/SIP wajib diisi untuk Dokter';
+                    }
+                    return null;
+                  },
+                ),
+              ],
               SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,

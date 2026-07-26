@@ -9,8 +9,11 @@ import woundify_backend.dto.AuthRequest;
 import woundify_backend.dto.AuthResponse;
 import woundify_backend.dto.DoctorSummaryResponse;
 import woundify_backend.dto.RegisterRequest;
+import org.springframework.transaction.annotation.Transactional;
 import woundify_backend.model.User;
 import woundify_backend.repository.UserRepository;
+import woundify_backend.repository.OtpTokenRepository;
+import woundify_backend.repository.PatientRepository;
 import woundify_backend.config.JwtTokenProvider;
 
 import java.util.Collections;
@@ -25,12 +28,17 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final OtpService otpService;
+    private final OtpTokenRepository otpTokenRepository;
+    private final PatientRepository patientRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider, OtpService otpService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider,
+                       OtpService otpService, OtpTokenRepository otpTokenRepository, PatientRepository patientRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
         this.otpService = otpService;
+        this.otpTokenRepository = otpTokenRepository;
+        this.patientRepository = patientRepository;
     }
 
     @Override
@@ -57,17 +65,45 @@ public class UserService implements UserDetailsService {
             // Fallback to NURSE role
         }
 
+        // Dokter wajib menyertakan nomor STR/SIP sebagai verifikasi tenaga medis
+        String strNumber = null;
+        if (role == User.Role.DOCTOR) {
+            if (request.getStrNumber() == null || request.getStrNumber().isBlank()) {
+                throw new RuntimeException("Nomor STR/SIP wajib diisi untuk pendaftaran sebagai Dokter.");
+            }
+            strNumber = request.getStrNumber().trim();
+        }
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .role(role)
+                .strNumber(strNumber)
                 .isVerified(false)
                 .build();
 
         User savedUser = userRepository.save(user);
         otpService.sendOtp(request.getEmail());
         return savedUser;
+    }
+
+    /**
+     * Menghapus akun berdasarkan email, sehingga email tersebut bisa didaftarkan
+     * ulang (mis. untuk mencoba role berbeda). Akun yang sudah memiliki data pasien
+     * tidak bisa dihapus untuk menjaga integritas data.
+     */
+    @Transactional
+    public void deleteAccount(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Akun tidak ditemukan."));
+
+        if (patientRepository.countByCreatedBy(user) > 0) {
+            throw new RuntimeException("Akun ini memiliki data pasien sehingga tidak dapat dihapus. Gunakan email lain untuk pengujian.");
+        }
+
+        otpTokenRepository.deleteByEmail(email);
+        userRepository.delete(user);
     }
 
     public User verifyEmail(String email, String otpCode) {

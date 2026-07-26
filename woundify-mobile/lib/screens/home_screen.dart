@@ -26,15 +26,24 @@ class _HomeScreenState extends State<HomeScreen> {
   InstitutionalImpactSummary? _impactSummary;
 
   String _formatRole(String role) {
-    final cleanRole = role.toUpperCase();
-    if (cleanRole == 'DOCTOR' || cleanRole == 'HEALTH_PROFESSIONAL') {
-      return 'Health Professionals';
-    } else if (cleanRole == 'NURSE') {
-      return 'Nurse';
-    } else if (cleanRole == 'ADMIN') {
-      return 'Admin';
+    switch (role.toUpperCase()) {
+      case 'DOCTOR':
+        return 'Dokter';
+      case 'NURSE':
+        return 'Perawat';
+      case 'RESEARCHER':
+        return 'Peneliti';
+      case 'LAB_ADMIN':
+        return 'Admin Laboratorium';
+      case 'HOSPITAL_ADMIN':
+        return 'Admin Rumah Sakit';
+      case 'HEALTH_PROFESSIONAL':
+        return 'Tenaga Kesehatan';
+      case 'ADMIN':
+        return 'Admin';
+      default:
+        return role;
     }
-    return role;
   }
 
   @override
@@ -209,6 +218,45 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
+    }
+  }
+
+  void _handleDeleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Akun'),
+        content: const Text(
+          'Akun ini akan dihapus permanen dan Anda akan keluar. '
+          'Email yang sama bisa didaftarkan ulang (mis. untuk mencoba peran berbeda). Lanjutkan?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hapus', style: TextStyle(color: Color(0xFFB71C1C))),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      await _apiService.deleteAccount(widget.currentUser.email);
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception:', '').trim())),
+        );
+      }
     }
   }
 
@@ -1274,6 +1322,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Delete Account Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: _handleDeleteAccount,
+                  icon: const Icon(Icons.delete_forever_rounded, size: 20),
+                  label: const Text('Hapus Akun'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFB71C1C),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               ),

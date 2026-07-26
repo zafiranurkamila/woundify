@@ -11,5 +11,6 @@ public class RegisterRequest {
     private String email;
     private String password;
     private String name;
-    private String role; // ADMIN, DOCTOR, HEALTH_PROFESSIONAL, NURSE
+    private String role; // NURSE, DOCTOR, RESEARCHER, LAB_ADMIN, HOSPITAL_ADMIN
+    private String strNumber; // Nomor STR/SIP — wajib jika role = DOCTOR
 }

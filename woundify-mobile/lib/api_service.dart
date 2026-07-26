@@ -67,7 +67,7 @@ class ApiService {
     }
   }
 
-  Future<User> register(String email, String password, String name, String role) async {
+  Future<User> register(String email, String password, String name, String role, {String? strNumber}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -76,14 +76,42 @@ class ApiService {
         'password': password,
         'name': name,
         'role': role,
+        if (strNumber != null && strNumber.isNotEmpty) 'strNumber': strNumber,
       }),
     );
 
     if (response.statusCode == 200) {
       return User.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Registration failed: ${response.body}');
+      throw Exception(_extractMessage(response.body, fallback: 'Registrasi gagal'));
     }
+  }
+
+  /// Deletes the account for [email] so the same email can be re-registered
+  /// (e.g. to try a different role). Clears the local session afterwards.
+  Future<void> deleteAccount(String email) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/auth/account?email=${Uri.encodeComponent(email)}'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      await logout();
+    } else {
+      throw Exception(_extractMessage(response.body, fallback: 'Gagal menghapus akun'));
+    }
+  }
+
+  /// Pulls the human-readable {"message": ...} the backend returns, falling back
+  /// to a generic message when the body isn't the expected shape.
+  String _extractMessage(String body, {required String fallback}) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['message'] != null) {
+        return decoded['message'].toString();
+      }
+    } catch (_) {}
+    return fallback;
   }
 
   Future<void> sendOtp(String email) async {

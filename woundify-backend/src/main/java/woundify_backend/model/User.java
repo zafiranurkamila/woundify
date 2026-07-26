@@ -36,6 +36,10 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    // Nomor STR/SIP — wajib diisi untuk pendaftaran sebagai DOCTOR (verifikasi tenaga medis)
+    @Column(name = "str_number")
+    private String strNumber;
+
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
@@ -48,9 +52,13 @@ public class User {
     }
 
     public enum Role {
-        ADMIN,
+        NURSE,
         DOCTOR,
-        HEALTH_PROFESSIONAL,
-        NURSE
+        RESEARCHER,
+        LAB_ADMIN,
+        HOSPITAL_ADMIN,
+        // Nilai lama dipertahankan agar baris data lama tetap terbaca (backward-compatible)
+        ADMIN,
+        HEALTH_PROFESSIONAL
     }
 }

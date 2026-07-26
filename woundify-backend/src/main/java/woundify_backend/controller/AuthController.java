@@ -44,4 +44,10 @@ public class AuthController {
     public ResponseEntity<User> verifyOtp(@RequestBody VerifyOtpRequest request) {
         return ResponseEntity.ok(userService.verifyEmail(request.getEmail(), request.getCode()));
     }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<Map<String, String>> deleteAccount(@RequestParam String email) {
+        userService.deleteAccount(email);
+        return ResponseEntity.ok(Map.of("message", "Akun berhasil dihapus"));
+    }
 }
