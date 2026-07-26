@@ -47,6 +47,10 @@ public class PatientReferral {
     @JoinColumn(name = "verified_by")
     private User verifiedBy;
 
+    // Tanggal & jam janji temu pasien, diambil dari slot jadwal dokter yang dipilih saat rujukan
+    @Column(name = "appointment_at")
+    private LocalDateTime appointmentAt;
+
     @Column(name = "requested_at", nullable = false, updatable = false)
     private LocalDateTime requestedAt;
 

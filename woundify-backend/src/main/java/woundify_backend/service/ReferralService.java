@@ -5,9 +5,11 @@ import org.springframework.transaction.annotation.Transactional;
 import woundify_backend.dto.ReferralCreateRequest;
 import woundify_backend.dto.ReferralResponse;
 import woundify_backend.dto.ReferralVerifyRequest;
+import woundify_backend.model.DoctorAvailability;
 import woundify_backend.model.Patient;
 import woundify_backend.model.PatientReferral;
 import woundify_backend.model.User;
+import woundify_backend.repository.DoctorAvailabilityRepository;
 import woundify_backend.repository.PatientReferralRepository;
 import woundify_backend.repository.UserRepository;
 
@@ -22,13 +24,16 @@ public class ReferralService {
     private final PatientReferralRepository referralRepository;
     private final PatientService patientService;
     private final UserRepository userRepository;
+    private final DoctorAvailabilityRepository availabilityRepository;
 
     public ReferralService(PatientReferralRepository referralRepository,
                            PatientService patientService,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           DoctorAvailabilityRepository availabilityRepository) {
         this.referralRepository = referralRepository;
         this.patientService = patientService;
         this.userRepository = userRepository;
+        this.availabilityRepository = availabilityRepository;
     }
 
     @Transactional
@@ -42,10 +47,22 @@ public class ReferralService {
 
         Patient patient = patientService.getPatientEntityById(request.getPatientId());
         User targetDoctor = userRepository.findById(request.getTargetDoctorId())
-                .orElseThrow(() -> new RuntimeException("Dokter tujuan tidak ditemukan"));
+                .orElseThrow(() -> new RuntimeException("Tujuan rujukan tidak ditemukan"));
 
-        if (targetDoctor.getRole() != User.Role.DOCTOR) {
-            throw new RuntimeException("Target rujukan harus pengguna dengan role DOCTOR");
+        // Jika perawat memilih slot jadwal dokter, tandai slot terpakai & simpan waktu janji temu
+        LocalDateTime appointmentAt = null;
+        if (request.getAvailabilitySlotId() != null) {
+            DoctorAvailability slot = availabilityRepository.findById(request.getAvailabilitySlotId())
+                    .orElseThrow(() -> new RuntimeException("Jadwal yang dipilih tidak ditemukan."));
+            if (!slot.getDoctor().getId().equals(targetDoctor.getId())) {
+                throw new RuntimeException("Jadwal tidak sesuai dengan dokter tujuan.");
+            }
+            if (slot.isBooked()) {
+                throw new RuntimeException("Jadwal sudah dipakai rujukan lain. Silakan pilih jadwal lain.");
+            }
+            slot.setBooked(true);
+            availabilityRepository.save(slot);
+            appointmentAt = slot.getSlotDateTime();
         }
 
         PatientReferral referral = PatientReferral.builder()
@@ -55,6 +72,7 @@ public class ReferralService {
                 .reason(request.getReason().trim())
                 .clinicalNotes(request.getClinicalNotes() == null ? "" : request.getClinicalNotes().trim())
                 .status(PatientReferral.Status.PENDING)
+                .appointmentAt(appointmentAt)
                 .build();
 
         return mapToResponse(referralRepository.save(referral));
@@ -70,9 +88,6 @@ public class ReferralService {
 
     @Transactional(readOnly = true)
     public List<ReferralResponse> getIncomingReferralsForDoctor(User doctor) {
-        if (doctor.getRole() != User.Role.DOCTOR) {
-            throw new RuntimeException("Hanya pengguna role DOCTOR yang dapat melihat rujukan masuk");
-        }
         return referralRepository.findByTargetDoctorIdOrderByRequestedAtDesc(doctor.getId())
                 .stream()
                 .map(this::mapToResponse)
@@ -81,10 +96,6 @@ public class ReferralService {
 
     @Transactional
     public ReferralResponse verifyReferral(UUID referralId, ReferralVerifyRequest request, User doctor) {
-        if (doctor.getRole() != User.Role.DOCTOR) {
-            throw new RuntimeException("Hanya pengguna role DOCTOR yang dapat memverifikasi rujukan");
-        }
-
         PatientReferral referral = referralRepository.findById(referralId)
                 .orElseThrow(() -> new RuntimeException("Rujukan tidak ditemukan"));
 
@@ -122,6 +133,7 @@ public class ReferralService {
                 .verifiedByName(referral.getVerifiedBy() != null ? referral.getVerifiedBy().getName() : null)
                 .requestedAt(referral.getRequestedAt())
                 .verifiedAt(referral.getVerifiedAt())
+                .appointmentAt(referral.getAppointmentAt())
                 .build();
     }
 }

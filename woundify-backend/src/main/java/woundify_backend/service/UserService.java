@@ -144,12 +144,24 @@ public class UserService implements UserDetailsService {
     public List<DoctorSummaryResponse> getDoctors() {
         return userRepository.findByRoleOrderByNameAsc(User.Role.DOCTOR)
                 .stream()
-                .map(user -> DoctorSummaryResponse.builder()
-                        .id(user.getId())
-                        .name(user.getName())
-                        .email(user.getEmail())
-                        .role(user.getRole().name())
-                        .build())
+                .map(this::toSummary)
                 .collect(Collectors.toList());
+    }
+
+    /** Semua pengguna sebagai kandidat tujuan rujukan (lintas role). */
+    public List<DoctorSummaryResponse> getReferralTargets() {
+        return userRepository.findAll()
+                .stream()
+                .map(this::toSummary)
+                .collect(Collectors.toList());
+    }
+
+    private DoctorSummaryResponse toSummary(User user) {
+        return DoctorSummaryResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .build();
     }
 }

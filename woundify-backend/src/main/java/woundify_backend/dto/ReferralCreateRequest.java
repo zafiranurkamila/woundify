@@ -14,4 +14,5 @@ public class ReferralCreateRequest {
     private UUID targetDoctorId;
     private String reason;
     private String clinicalNotes;
+    private UUID availabilitySlotId; // slot jadwal dokter yang dipilih (opsional)
 }

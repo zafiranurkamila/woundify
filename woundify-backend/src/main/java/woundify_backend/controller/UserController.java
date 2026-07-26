@@ -23,4 +23,10 @@ public class UserController {
     public ResponseEntity<List<DoctorSummaryResponse>> getDoctors() {
         return ResponseEntity.ok(userService.getDoctors());
     }
+
+    // Semua pengguna lintas role sebagai kandidat tujuan rujukan
+    @GetMapping("/referral-targets")
+    public ResponseEntity<List<DoctorSummaryResponse>> getReferralTargets() {
+        return ResponseEntity.ok(userService.getReferralTargets());
+    }
 }

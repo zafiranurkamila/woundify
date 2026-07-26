@@ -303,6 +303,7 @@ class ReferralRecord {
   final String? verifiedByName;
   final DateTime? requestedAt;
   final DateTime? verifiedAt;
+  final DateTime? appointmentAt;
 
   ReferralRecord({
     required this.id,
@@ -321,6 +322,7 @@ class ReferralRecord {
     this.verifiedByName,
     this.requestedAt,
     this.verifiedAt,
+    this.appointmentAt,
   });
 
   factory ReferralRecord.fromJson(Map<String, dynamic> json) {
@@ -341,6 +343,33 @@ class ReferralRecord {
       verifiedByName: json['verifiedByName'],
       requestedAt: json['requestedAt'] != null ? DateTime.tryParse(json['requestedAt']) : null,
       verifiedAt: json['verifiedAt'] != null ? DateTime.tryParse(json['verifiedAt']) : null,
+      appointmentAt: json['appointmentAt'] != null ? DateTime.tryParse(json['appointmentAt']) : null,
+    );
+  }
+}
+
+class AvailabilitySlot {
+  final String id;
+  final String doctorId;
+  final String doctorName;
+  final DateTime slotDateTime;
+  final bool booked;
+
+  AvailabilitySlot({
+    required this.id,
+    required this.doctorId,
+    required this.doctorName,
+    required this.slotDateTime,
+    required this.booked,
+  });
+
+  factory AvailabilitySlot.fromJson(Map<String, dynamic> json) {
+    return AvailabilitySlot(
+      id: json['id']?.toString() ?? '',
+      doctorId: json['doctorId']?.toString() ?? '',
+      doctorName: json['doctorName'] ?? '',
+      slotDateTime: DateTime.tryParse(json['slotDateTime'] ?? '') ?? DateTime.now(),
+      booked: json['booked'] == true,
     );
   }
 }

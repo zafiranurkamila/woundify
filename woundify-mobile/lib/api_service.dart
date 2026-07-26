@@ -237,11 +237,25 @@ class ApiService {
     throw Exception('Failed to fetch doctors: ${response.body}');
   }
 
+  /// All users across roles as referral targets (not just doctors).
+  Future<List<DoctorSummary>> getReferralTargets() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/users/referral-targets'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> list = jsonDecode(response.body);
+      return list.map((json) => DoctorSummary.fromJson(json)).toList();
+    }
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memuat daftar tujuan rujukan'));
+  }
+
   Future<ReferralRecord> createReferral({
     required String patientId,
     required String targetDoctorId,
     required String reason,
     String clinicalNotes = '',
+    String? availabilitySlotId,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/referrals'),
@@ -251,13 +265,63 @@ class ApiService {
         'targetDoctorId': targetDoctorId,
         'reason': reason,
         'clinicalNotes': clinicalNotes,
+        if (availabilitySlotId != null) 'availabilitySlotId': availabilitySlotId,
       }),
     );
 
     if (response.statusCode == 200) {
       return ReferralRecord.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Failed to create referral: ${response.body}');
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal membuat rujukan'));
+  }
+
+  // --- DOCTOR AVAILABILITY (jadwal kosong dokter untuk rujukan) ---
+  Future<AvailabilitySlot> addAvailability(DateTime slotDateTime) async {
+    // Kirim ISO tanpa zona (LocalDateTime di backend), detik dinolkan
+    final iso = slotDateTime.toIso8601String().split('.').first;
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/availability'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'slotDateTime': iso}),
+    );
+    if (response.statusCode == 200) {
+      return AvailabilitySlot.fromJson(jsonDecode(response.body));
+    }
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal menambah jadwal'));
+  }
+
+  Future<List<AvailabilitySlot>> getMyAvailability() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/availability/me'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> list = jsonDecode(response.body);
+      return list.map((j) => AvailabilitySlot.fromJson(j)).toList();
+    }
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memuat jadwal'));
+  }
+
+  Future<List<AvailabilitySlot>> getDoctorFreeSlots(String doctorId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/availability/doctor/$doctorId'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> list = jsonDecode(response.body);
+      return list.map((j) => AvailabilitySlot.fromJson(j)).toList();
+    }
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memuat jadwal dokter'));
+  }
+
+  Future<void> deleteAvailability(String slotId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/availability/$slotId'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(_extractMessage(response.body, fallback: 'Gagal menghapus jadwal'));
+    }
   }
 
   Future<List<ReferralRecord>> getPatientReferrals(String patientId) async {

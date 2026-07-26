@@ -29,4 +29,5 @@ public class ReferralResponse {
     private String verifiedByName;
     private LocalDateTime requestedAt;
     private LocalDateTime verifiedAt;
+    private LocalDateTime appointmentAt;
 }

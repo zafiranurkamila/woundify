@@ -9,6 +9,7 @@ import 'epidemiology_trends_screen.dart';
 import 'validation_analytics_screen.dart';
 import 'login_screen.dart';
 import 'doctor_referral_inbox_screen.dart';
+import 'profile_schedule_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User currentUser;
@@ -610,7 +611,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Feature Icon Grid (4 columns, like Halodoc) ──
   Widget _buildFeatureGrid() {
-    final isDoctor = widget.currentUser.role.toUpperCase() == 'DOCTOR';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -656,16 +656,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             _buildFeatureIcon(
-              icon: isDoctor ? Icons.fact_check_rounded : Icons.rate_review_rounded,
-              label: isDoctor ? 'Rujukan Masuk' : 'Survei Validasi',
+              icon: Icons.fact_check_rounded,
+              label: 'Rujukan Masuk',
               color: const Color(0xFF2E7D32),
               bgColor: const Color(0xFFE8F5E9),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => isDoctor
-                      ? DoctorReferralInboxScreen(currentUser: widget.currentUser)
-                      : const ValidationAnalyticsScreen(),
+                  builder: (context) => DoctorReferralInboxScreen(currentUser: widget.currentUser),
                 ),
               ),
             ),
@@ -1256,6 +1254,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
+                    _buildProfileMenuItem(
+                      icon: Icons.event_note_rounded,
+                      label: 'Profil & Jadwal Saya',
+                      subtitle: 'Kelola jadwal ketersediaan rujukan',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfileScheduleScreen(currentUser: widget.currentUser),
+                        ),
+                      ),
+                    ),
+                    _divider(),
+                    _buildProfileMenuItem(
+                      icon: Icons.rate_review_rounded,
+                      label: 'Survei Validasi',
+                      subtitle: 'Uji reliabilitas & validitas instrumen',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ValidationAnalyticsScreen()),
+                      ),
+                    ),
+                    _divider(),
                     _buildProfileMenuItem(
                       icon: Icons.person_outline_rounded,
                       label: 'Info Akun',

@@ -54,26 +54,22 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final futures = <Future<dynamic>>[
+      final results = await Future.wait(<Future<dynamic>>[
         _apiService.getPatientHistory(widget.patient.id),
         _apiService.getPatientReferrals(widget.patient.id),
         _apiService.getPatientFollowUps(widget.patient.id),
-      ];
-
-      if (!_isDoctor) {
-        futures.add(_apiService.getDoctors());
-      }
-
-      final results = await Future.wait(futures);
+        _apiService.getReferralTargets(),
+      ]);
       if (!mounted) return;
 
       setState(() {
         _labHistory = results[0] as List<LabResult>;
         _referrals = results[1] as List<ReferralRecord>;
         _followUps = results[2] as List<WoundFollowUp>;
-        _doctors = !_isDoctor && results.length > 3
-            ? results[3] as List<DoctorSummary>
-            : [];
+        // Semua role bisa jadi tujuan rujukan; kecualikan diri sendiri
+        _doctors = (results[3] as List<DoctorSummary>)
+            .where((d) => d.id != widget.currentUser.id)
+            .toList();
       });
     } catch (e) {
       if (!mounted) return;
@@ -104,6 +100,31 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     return 'dr. $trimmed';
   }
 
+  String _roleLabel(String role) {
+    switch (role.toUpperCase()) {
+      case 'DOCTOR':
+        return 'Dokter';
+      case 'NURSE':
+        return 'Perawat';
+      case 'RESEARCHER':
+        return 'Peneliti';
+      case 'LAB_ADMIN':
+        return 'Admin Laboratorium';
+      case 'HOSPITAL_ADMIN':
+        return 'Admin Rumah Sakit';
+      default:
+        return role;
+    }
+  }
+
+  /// Label tujuan rujukan lintas role: dokter diberi gelar "dr.", role lain
+  /// ditampilkan apa adanya, disertai jenis perannya.
+  String _formatTargetLabel(DoctorSummary target) {
+    final isDoctor = target.role.toUpperCase() == 'DOCTOR';
+    final name = isDoctor ? _formatDoctorName(target.name) : target.name;
+    return '$name — ${_roleLabel(target.role)}';
+  }
+
   Future<void> _openReferralDialog() async {
     if (_doctors.isEmpty) {
       NotificationHelper.warning(context, 'Dokter belum tersedia untuk dirujuk.', title: 'Tidak Ada Dokter');
@@ -113,6 +134,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     final reasonController = TextEditingController();
     final noteController = TextEditingController();
     DoctorSummary selectedDoctor = _doctors.first;
+
+    // Jadwal kosong dokter tujuan — perawat memilih tanggal & jam janji temu pasien
+    List<AvailabilitySlot> freeSlots = [];
+    AvailabilitySlot? selectedSlot;
+    bool loadingSlots = true;
+    try {
+      freeSlots = await _apiService.getDoctorFreeSlots(selectedDoctor.id);
+    } catch (_) {}
+    selectedSlot = freeSlots.isNotEmpty ? freeSlots.first : null;
+    loadingSlots = false;
 
     final submitted = await showModalBottomSheet<bool>(
       context: context,
@@ -136,7 +167,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Ajukan Rujukan Ke Dokter',
+                    'Ajukan Rujukan',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -147,23 +178,75 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                   DropdownButtonFormField<DoctorSummary>(
                     value: selectedDoctor,
                     decoration: const InputDecoration(
-                      labelText: 'Dokter Tujuan',
+                      labelText: 'Tujuan Rujukan',
                       border: OutlineInputBorder(),
                     ),
                     items: _doctors
                         .map(
                           (doctor) => DropdownMenuItem<DoctorSummary>(
                             value: doctor,
-                            child: Text(_formatDoctorName(doctor.name)),
+                            child: Text(_formatTargetLabel(doctor)),
                           ),
                         )
                         .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        modalSetState(() => selectedDoctor = value);
-                      }
+                    onChanged: (value) async {
+                      if (value == null) return;
+                      modalSetState(() {
+                        selectedDoctor = value;
+                        loadingSlots = true;
+                        freeSlots = [];
+                        selectedSlot = null;
+                      });
+                      List<AvailabilitySlot> slots = [];
+                      try {
+                        slots = await _apiService.getDoctorFreeSlots(value.id);
+                      } catch (_) {}
+                      modalSetState(() {
+                        freeSlots = slots;
+                        selectedSlot = slots.isNotEmpty ? slots.first : null;
+                        loadingSlots = false;
+                      });
                     },
                   ),
+                  const SizedBox(height: 12),
+                  // Pemilihan jadwal (tanggal & jam) dari slot kosong dokter
+                  if (loadingSlots)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: LinearProgressIndicator(),
+                    )
+                  else if (freeSlots.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Dokter ini belum menyediakan jadwal. Rujukan tetap bisa diajukan tanpa tanggal janji temu.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF8D6E63)),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<AvailabilitySlot>(
+                      value: selectedSlot,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Pilih Jadwal (tanggal & jam)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.event_available),
+                      ),
+                      items: freeSlots
+                          .map(
+                            (slot) => DropdownMenuItem<AvailabilitySlot>(
+                              value: slot,
+                              child: Text(_formatDateTime(slot.slotDateTime)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) => modalSetState(() => selectedSlot = value),
+                    ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: reasonController,
@@ -217,6 +300,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         targetDoctorId: selectedDoctor.id,
         reason: reasonController.text.trim(),
         clinicalNotes: noteController.text.trim(),
+        availabilitySlotId: selectedSlot?.id,
       );
       if (!mounted) return;
       NotificationHelper.success(context, 'Rujukan berhasil diajukan dan menunggu verifikasi dokter.', title: 'Rujukan Dikirim');
@@ -894,7 +978,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 
   Widget _buildReferralTab() {
-    final pendingForDoctor = _referrals
+    final pendingForMe = _referrals
         .where((r) =>
             r.targetDoctorId == widget.currentUser.id &&
             r.status.toUpperCase() == 'PENDING')
@@ -903,23 +987,22 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (!_isDoctor)
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isSubmittingReferral ? null : _openReferralDialog,
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Ajukan Rujukan Ke Dokter'),
-            ),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isSubmittingReferral ? null : _openReferralDialog,
+            icon: const Icon(Icons.send_rounded),
+            label: const Text('Ajukan Rujukan'),
           ),
-        if (!_isDoctor) const SizedBox(height: 12),
+        ),
+        const SizedBox(height: 12),
         _buildWhiteCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _isDoctor ? 'Rujukan Masuk Untuk Anda' : 'Riwayat Rujukan Pasien',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+              const Text(
+                'Riwayat Rujukan Pasien',
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
               if (_referrals.isEmpty)
@@ -961,6 +1044,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                             padding: const EdgeInsets.only(top: 4),
                             child: Text('Catatan: ${referral.clinicalNotes}'),
                           ),
+                        if (referral.appointmentAt != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_available, size: 16, color: Color(0xFF2E7D32)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Janji temu: ${_formatDateTime(referral.appointmentAt)}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF2E7D32),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         const SizedBox(height: 6),
                         Text(
                           'Diajukan oleh ${referral.requestedByName} • ${_formatDateTime(referral.requestedAt)}',
@@ -980,8 +1083,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                               ),
                             ),
                           ),
-                        if (_isDoctor &&
-                            referral.targetDoctorId == widget.currentUser.id &&
+                        if (referral.targetDoctorId == widget.currentUser.id &&
                             referral.status.toUpperCase() == 'PENDING')
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -1015,12 +1117,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     ),
                   ),
                 ),
-              if (_isDoctor && pendingForDoctor.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 6),
+              if (pendingForMe.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    'Tidak ada rujukan pending untuk diverifikasi.',
-                    style: TextStyle(color: Color(0xFF64748B)),
+                    '${pendingForMe.length} rujukan menunggu verifikasi Anda.',
+                    style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w600),
                   ),
                 ),
             ],
