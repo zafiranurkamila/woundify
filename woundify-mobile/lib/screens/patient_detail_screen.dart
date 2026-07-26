@@ -96,6 +96,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     return '$day/$month/${value.year} ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   }
 
+  /// Menampilkan nama dokter dengan gelar "dr." otomatis, tanpa menggandakan
+  /// bila nama sudah diawali "dr".
+  String _formatDoctorName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.toLowerCase().startsWith('dr')) return trimmed;
+    return 'dr. $trimmed';
+  }
+
   Future<void> _openReferralDialog() async {
     if (_doctors.isEmpty) {
       NotificationHelper.warning(context, 'Dokter belum tersedia untuk dirujuk.', title: 'Tidak Ada Dokter');
@@ -146,7 +154,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         .map(
                           (doctor) => DropdownMenuItem<DoctorSummary>(
                             value: doctor,
-                            child: Text('${doctor.name} (${doctor.email})'),
+                            child: Text(_formatDoctorName(doctor.name)),
                           ),
                         )
                         .toList(),
@@ -936,7 +944,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                           children: [
                             Expanded(
                               child: Text(
-                                referral.targetDoctorName,
+                                _formatDoctorName(referral.targetDoctorName),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF1E293B),

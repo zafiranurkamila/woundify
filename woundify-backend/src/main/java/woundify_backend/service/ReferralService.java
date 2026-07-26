@@ -60,6 +60,7 @@ public class ReferralService {
         return mapToResponse(referralRepository.save(referral));
     }
 
+    @Transactional(readOnly = true)
     public List<ReferralResponse> getPatientReferrals(UUID patientId) {
         return referralRepository.findByPatientIdOrderByRequestedAtDesc(patientId)
                 .stream()
@@ -67,6 +68,7 @@ public class ReferralService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ReferralResponse> getIncomingReferralsForDoctor(User doctor) {
         if (doctor.getRole() != User.Role.DOCTOR) {
             throw new RuntimeException("Hanya pengguna role DOCTOR yang dapat melihat rujukan masuk");
