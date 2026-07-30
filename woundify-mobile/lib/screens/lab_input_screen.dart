@@ -30,20 +30,22 @@ class _LabInputScreenState extends State<LabInputScreen> {
   final _susceptibilityController = TextEditingController();
   final _ocrRawController = TextEditingController();
 
-  String _gramStain = 'GRAM_NEGATIVE';
-  String _indole = 'NEGATIVE';
-  String _mr = 'NEGATIVE';
-  String _vp = 'NEGATIVE';
-  String _citrate = 'NEGATIVE';
-  String _macconkey = 'LACTOSE_FERMENTER';
-  String _colonyTexture = 'MUCOID';
-  String _colonySize = 'MEDIUM';
-  String _h2s = 'NEGATIVE';
-  String _motil = 'NEGATIVE';
-  String _urease = 'NEGATIVE';
-  int _tsi = 3; // 0=Acid/Acid+Gas, 1=Acid/Acid no gas, 2=Acid/Alkali+H2S, 3=Alkali/Alkali
-  int _emb = 0; // 0=Colorless, 1=Merah Muda, 2=Hijau Metalik
-  String _nas = 'NEGATIVE';
+  // Default kosong (belum terpilih) — pengguna wajib memilih sendiri, tidak
+  // ada opsi yang otomatis ter-"pencet". _tsi/_emb: -1 = belum dipilih.
+  String _gramStain = '';
+  String _indole = '';
+  String _mr = '';
+  String _vp = '';
+  String _citrate = '';
+  String _macconkey = '';
+  String _colonyTexture = '';
+  String _colonySize = '';
+  String _h2s = '';
+  String _motil = '';
+  String _urease = '';
+  int _tsi = -1; // 0=Acid/Acid+Gas, 1=Acid/Acid no gas, 2=Acid/Alkali+H2S, 3=Alkali/Alkali
+  int _emb = -1; // 0=Colorless, 1=Merah Muda, 2=Hijau Metalik
+  String _nas = '';
   bool _noSignificantGrowth = false;
 
   bool _isLoading = false;
@@ -127,8 +129,8 @@ class _LabInputScreenState extends State<LabInputScreen> {
       _h2s = saved[13];
       _motil = saved[14];
       _urease = saved[15];
-      _tsi = int.tryParse(saved[16]) ?? 3;
-      _emb = int.tryParse(saved[17]) ?? 0;
+      _tsi = int.tryParse(saved[16]) ?? -1;
+      _emb = int.tryParse(saved[17]) ?? -1;
       _nas = saved[18];
     });
   }
@@ -159,20 +161,20 @@ class _LabInputScreenState extends State<LabInputScreen> {
       final data = await _apiService.scanLabSheetOcr(file);
       
       setState(() {
-        _gramStain = data['gram_stain'] ?? 'GRAM_NEGATIVE';
-        _indole = data['imvic_indole'] ?? 'NEGATIVE';
-        _mr = data['imvic_methyl_red'] ?? 'NEGATIVE';
-        _vp = data['imvic_voges_proskauer'] ?? 'NEGATIVE';
-        _citrate = data['imvic_citrate'] ?? 'NEGATIVE';
-        _macconkey = data['macconkey'] ?? 'LACTOSE_FERMENTER';
-        _h2s = data['h2s'] ?? 'NEGATIVE';
-        _motil = data['motil'] ?? 'NEGATIVE';
-        _urease = data['urease'] ?? 'NEGATIVE';
-        _tsi = (data['tsi'] is int) ? data['tsi'] : 3;
-        _emb = (data['emb'] is int) ? data['emb'] : 0;
-        _nas = data['nas'] ?? 'NEGATIVE';
-        _colonyTexture = data['colony_texture'] ?? 'MUCOID';
-        _colonySize = data['colony_size'] ?? 'MEDIUM';
+        _gramStain = data['gram_stain'] ?? '';
+        _indole = data['imvic_indole'] ?? '';
+        _mr = data['imvic_methyl_red'] ?? '';
+        _vp = data['imvic_voges_proskauer'] ?? '';
+        _citrate = data['imvic_citrate'] ?? '';
+        _macconkey = data['macconkey'] ?? '';
+        _h2s = data['h2s'] ?? '';
+        _motil = data['motil'] ?? '';
+        _urease = data['urease'] ?? '';
+        _tsi = (data['tsi'] is int) ? data['tsi'] : -1;
+        _emb = (data['emb'] is int) ? data['emb'] : -1;
+        _nas = data['nas'] ?? '';
+        _colonyTexture = data['colony_texture'] ?? '';
+        _colonySize = data['colony_size'] ?? '';
         _morphologyController.text = data['colony_morphology'] ?? '';
         _cultureResultController.text = data['culture_result'] ?? '';
         _ocrRawController.text = 'OCR processed from ${file.path.split('/').last}';
@@ -209,6 +211,32 @@ class _LabInputScreenState extends State<LabInputScreen> {
 
     if (!_formKey.currentState!.validate()) return;
 
+    // Semua hasil uji wajib dipilih (kecuali bila "tidak ada pertumbuhan bermakna")
+    if (!_noSignificantGrowth) {
+      final incomplete = _gramStain.isEmpty ||
+          _indole.isEmpty ||
+          _mr.isEmpty ||
+          _vp.isEmpty ||
+          _citrate.isEmpty ||
+          _macconkey.isEmpty ||
+          _colonyTexture.isEmpty ||
+          _colonySize.isEmpty ||
+          _h2s.isEmpty ||
+          _motil.isEmpty ||
+          _urease.isEmpty ||
+          _nas.isEmpty ||
+          _tsi < 0 ||
+          _emb < 0;
+      if (incomplete) {
+        NotificationHelper.warning(
+          context,
+          'Lengkapi semua hasil uji terlebih dahulu, atau centang "Tidak ada pertumbuhan bermakna".',
+          title: 'Uji Belum Lengkap',
+        );
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -233,8 +261,8 @@ class _LabInputScreenState extends State<LabInputScreen> {
         'h2s': _h2s,
         'motil': _motil,
         'urease': _urease,
-        'tsi': _tsi,
-        'emb': _emb,
+        'tsi': _tsi < 0 ? 3 : _tsi,
+        'emb': _emb < 0 ? 0 : _emb,
         'nas': _nas,
       };
 
