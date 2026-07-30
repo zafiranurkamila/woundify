@@ -7,6 +7,17 @@ import 'models.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Saat sesi berakhir: bersihkan sesi & arahkan ke login dengan pesan bersih
+  // (tanpa menampilkan isi mentah dari backend).
+  ApiService.onSessionExpired = () {
+    ApiService.navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+    ApiService.scaffoldMessengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Sesi Anda telah berakhir. Silakan login kembali.')),
+    );
+  };
   runApp(const WoundifyApp());
 }
 
@@ -17,6 +28,8 @@ class WoundifyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Woundify',
+      navigatorKey: ApiService.navigatorKey,
+      scaffoldMessengerKey: ApiService.scaffoldMessengerKey,
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: const Color(0xFFF4F6F9),

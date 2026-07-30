@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
@@ -7,6 +8,16 @@ import 'models.dart';
 class ApiService {
   static const String baseUrl = 'https://woundify-production.up.railway.app'; // Railway serves HTTPS; http:// is blocked by Android cleartext policy
   String? _token;
+
+  /// Navigator global agar bisa pindah ke layar login dari mana saja saat sesi berakhir.
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  /// Messenger global untuk menampilkan pesan bersih (mis. "Sesi berakhir").
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  /// Dipasang oleh main.dart untuk menangani sesi berakhir (bersihkan sesi + ke login).
+  static void Function()? onSessionExpired;
+  static bool _handlingSessionExpiry = false;
 
   Future<Map<String, String>> _getHeaders() async {
     if (_token == null) {
@@ -31,14 +42,38 @@ class ApiService {
   }
 
   /// Restores the logged-in user from storage (for auto-login on app start).
-  /// Returns null if there is no saved session.
+  /// Returns null if there is no saved session or the token has expired.
   Future<User?> getSavedUser() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     final userStr = prefs.getString('auth_user');
     if (token == null || userStr == null) return null;
+    // Jangan auto-login dengan token kadaluarsa (menghindari "Sesi tidak valid")
+    if (_isTokenExpired(token)) {
+      await logout();
+      return null;
+    }
     _token = token;
     return User.fromJson(jsonDecode(userStr), token: token);
+  }
+
+  /// Membaca klaim `exp` dari payload JWT secara lokal (tanpa memanggil server).
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+      while (payload.length % 4 != 0) {
+        payload += '=';
+      }
+      final map = jsonDecode(utf8.decode(base64.decode(payload)));
+      final exp = map['exp'];
+      if (exp is! int) return false; // tak bisa tentukan → anggap masih valid
+      final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      return exp < nowSec;
+    } catch (_) {
+      return false; // gagal parse → jangan paksa logout
+    }
   }
 
   Future<void> logout() async {
@@ -103,15 +138,39 @@ class ApiService {
   }
 
   /// Pulls the human-readable {"message": ...} the backend returns, falling back
-  /// to a generic message when the body isn't the expected shape.
+  /// to a generic message when the body isn't the expected shape. Also detects an
+  /// expired session and triggers a clean auto-logout instead of showing raw text.
   String _extractMessage(String body, {required String fallback}) {
+    String msg = fallback;
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map && decoded['message'] != null) {
-        return decoded['message'].toString();
+        msg = decoded['message'].toString();
       }
     } catch (_) {}
-    return fallback;
+    if (_looksLikeSessionExpired(body) || _looksLikeSessionExpired(msg)) {
+      _triggerSessionExpired();
+      return 'Sesi Anda telah berakhir. Silakan login kembali.';
+    }
+    return msg;
+  }
+
+  bool _looksLikeSessionExpired(String text) {
+    final t = text.toLowerCase();
+    return t.contains('sesi tidak valid') ||
+        t.contains('login ulang') ||
+        t.contains('sesi anda telah berakhir');
+  }
+
+  /// Bersihkan sesi lokal lalu arahkan ke layar login (sekali saja).
+  void _triggerSessionExpired() {
+    if (_handlingSessionExpiry) return;
+    _handlingSessionExpiry = true;
+    logout();
+    final cb = onSessionExpired;
+    if (cb != null) cb();
+    // izinkan lagi setelah transisi selesai
+    Future.delayed(const Duration(seconds: 2), () => _handlingSessionExpiry = false);
   }
 
   Future<void> sendOtp(String email) async {
@@ -171,7 +230,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return Patient.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to create patient: ${response.body}');
+      throw Exception(_extractMessage(response.body, fallback: 'Gagal mendaftarkan pasien'));
     }
   }
 
@@ -205,7 +264,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return LabResult.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to save laboratory record: ${response.body}');
+      throw Exception(_extractMessage(response.body, fallback: 'Gagal menyimpan hasil laboratorium'));
     }
   }
 
@@ -337,6 +396,18 @@ class ApiService {
     throw Exception(_extractMessage(response.body, fallback: 'Gagal mengirim pesan'));
   }
 
+  Future<int> getUnreadChatCount() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/chat/unread'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data['unread'] ?? 0) is int ? data['unread'] : int.tryParse('${data['unread']}') ?? 0;
+    }
+    return 0;
+  }
+
   Future<List<ChatMessage>> getConversation(String peerId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/chat/conversation/$peerId'),
@@ -359,7 +430,7 @@ class ApiService {
       final List<dynamic> list = jsonDecode(response.body);
       return list.map((json) => ReferralRecord.fromJson(json)).toList();
     }
-    throw Exception('Failed to fetch patient referrals: ${response.body}');
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memuat rujukan pasien'));
   }
 
   Future<List<ReferralRecord>> getIncomingReferrals() async {
@@ -372,7 +443,7 @@ class ApiService {
       final List<dynamic> list = jsonDecode(response.body);
       return list.map((json) => ReferralRecord.fromJson(json)).toList();
     }
-    throw Exception('Failed to fetch incoming referrals: ${response.body}');
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memuat rujukan masuk'));
   }
 
   Future<ReferralRecord> verifyReferral({
@@ -392,7 +463,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return ReferralRecord.fromJson(jsonDecode(response.body));
     }
-    throw Exception('Failed to verify referral: ${response.body}');
+    throw Exception(_extractMessage(response.body, fallback: 'Gagal memverifikasi rujukan'));
   }
 
   // --- WOUND FOLLOW-UP (treatment outcome tracking) ---

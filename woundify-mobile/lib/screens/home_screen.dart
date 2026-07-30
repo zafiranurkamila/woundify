@@ -10,7 +10,6 @@ import 'validation_analytics_screen.dart';
 import 'login_screen.dart';
 import 'doctor_referral_inbox_screen.dart';
 import 'profile_schedule_screen.dart';
-import 'chat_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final User currentUser;
@@ -48,11 +47,23 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  int _unreadChat = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchPatients();
     _fetchImpactSummary();
+    _fetchUnreadChat();
+  }
+
+  void _fetchUnreadChat() async {
+    try {
+      final count = await _apiService.getUnreadChatCount();
+      if (mounted) setState(() => _unreadChat = count);
+    } catch (_) {
+      // best-effort indicator
+    }
   }
 
   void _fetchPatients() async {
@@ -137,6 +148,15 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
             ),
             const SizedBox(height: 14),
+            if (_unreadChat > 0) ...[
+              _notifItem(
+                icon: Icons.chat_bubble_outline_rounded,
+                color: const Color(0xFF1E88E5),
+                title: '$_unreadChat pesan baru',
+                subtitle: 'Ada pesan masuk terkait rujukan. Buka rujukan pasien untuk membalas.',
+              ),
+              const SizedBox(height: 10),
+            ],
             if (!hasHighRisk && !hasLowConf)
               _notifItem(
                 icon: Icons.check_circle_outline_rounded,
@@ -410,24 +430,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Chat
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 22),
-              color: const Color(0xFF1E88E5),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatListScreen(currentUser: widget.currentUser),
-                ),
-              ),
-            ),
-          ),
           // Notification bell
           Container(
             decoration: BoxDecoration(
@@ -442,7 +444,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: const Color(0xFF64748B),
                   onPressed: _showNotificationPanel,
                 ),
-                if (_impactSummary != null && _impactSummary!.highRiskCasesDetected > 0)
+                if (_unreadChat > 0 || (_impactSummary != null && _impactSummary!.highRiskCasesDetected > 0))
                   Positioned(
                     top: 8,
                     right: 8,
@@ -630,6 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Feature Icon Grid (4 columns, like Halodoc) ──
   Widget _buildFeatureGrid() {
+    final isDoctor = widget.currentUser.role.toUpperCase() == 'DOCTOR';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -675,14 +678,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             _buildFeatureIcon(
-              icon: Icons.fact_check_rounded,
-              label: 'Rujukan Masuk',
+              icon: isDoctor ? Icons.fact_check_rounded : Icons.rate_review_rounded,
+              label: isDoctor ? 'Rujukan Masuk' : 'Survei Validasi',
               color: const Color(0xFF2E7D32),
               bgColor: const Color(0xFFE8F5E9),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DoctorReferralInboxScreen(currentUser: widget.currentUser),
+                  builder: (context) => isDoctor
+                      ? DoctorReferralInboxScreen(currentUser: widget.currentUser)
+                      : const ValidationAnalyticsScreen(),
                 ),
               ),
             ),
@@ -1292,6 +1297,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const ValidationAnalyticsScreen()),
+                      ),
+                    ),
+                    _divider(),
+                    _buildProfileMenuItem(
+                      icon: Icons.workspace_premium_rounded,
+                      label: 'Paket Premium (Segera Hadir)',
+                      subtitle: 'Akses penuh: integrasi SIMRS/RME, dashboard lanjutan',
+                      onTap: () => _showInfoDialog(
+                        'Paket Premium — Segera Hadir',
+                        'Fitur premium yang sedang kami siapkan:\n\n'
+                            '• Profiling pasien penuh & dashboard monitoring lanjutan\n'
+                            '• Integrasi SIMRS / RME / LIS\n'
+                            '• Akses API & laporan surveilans institusi\n'
+                            '• Dukungan prioritas & pelatihan implementasi\n\n'
+                            'Saat ini seluruh fitur inti dapat digunakan gratis. Paket premium akan hadir pada tahap pengembangan berikutnya.',
                       ),
                     ),
                     _divider(),

@@ -608,17 +608,10 @@ class _LabInputScreenState extends State<LabInputScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    TextFormField(
-                      controller: _cultureResultController,
-                      style: const TextStyle(color: Colors.black87),
-                      decoration: InputDecoration(
-                        labelText: 'Dugaan Mikroorganisme (Hasil Kultur)',
-                        labelStyle: const TextStyle(color: Colors.black54),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.black26)),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF1E88E5), width: 2)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                    // Catatan: "Dugaan Mikroorganisme" TIDAK diinput manual — hasilnya
+                    // muncul otomatis dari prediksi AI berdasarkan uji biokimia. Bila
+                    // bakteri di luar basis data, AI menandai "kemungkinan bakteri lain,
+                    // perlu kultur" (berguna sebagai tren untuk memperbarui basis data).
 
                     TextFormField(
                       controller: _susceptibilityController,

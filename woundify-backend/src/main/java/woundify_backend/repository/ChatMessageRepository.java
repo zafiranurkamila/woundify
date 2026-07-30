@@ -15,4 +15,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     @Query("SELECT m FROM ChatMessage m WHERE (m.sender.id = :a AND m.recipient.id = :b) "
             + "OR (m.sender.id = :b AND m.recipient.id = :a) ORDER BY m.sentAt ASC")
     List<ChatMessage> findConversation(@Param("a") UUID a, @Param("b") UUID b);
+
+    long countByRecipientIdAndReadFalse(UUID recipientId);
+
+    List<ChatMessage> findBySenderIdAndRecipientIdAndReadFalse(UUID senderId, UUID recipientId);
 }

@@ -45,9 +45,18 @@ public class ReferralService {
             throw new RuntimeException("Alasan rujukan wajib diisi");
         }
 
+        // Hanya tenaga non-dokter yang mengajukan rujukan; dokter menindaklanjuti rujukan masuk
+        if (currentUser.getRole() == User.Role.DOCTOR) {
+            throw new RuntimeException("Dokter tidak mengajukan rujukan. Dokter menindaklanjuti rujukan yang masuk.");
+        }
+
         Patient patient = patientService.getPatientEntityById(request.getPatientId());
         User targetDoctor = userRepository.findById(request.getTargetDoctorId())
-                .orElseThrow(() -> new RuntimeException("Tujuan rujukan tidak ditemukan"));
+                .orElseThrow(() -> new RuntimeException("Dokter tujuan tidak ditemukan"));
+
+        if (targetDoctor.getRole() != User.Role.DOCTOR) {
+            throw new RuntimeException("Rujukan hanya dapat ditujukan kepada Dokter.");
+        }
 
         // Jika perawat memilih slot jadwal dokter, tandai slot terpakai & simpan waktu janji temu
         LocalDateTime appointmentAt = null;

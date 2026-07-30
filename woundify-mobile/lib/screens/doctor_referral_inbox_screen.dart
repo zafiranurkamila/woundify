@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../models.dart';
 import '../utils/notification_helper.dart';
+import 'chat_thread_screen.dart';
 
 class DoctorReferralInboxScreen extends StatefulWidget {
   final User currentUser;
@@ -21,6 +22,21 @@ class _DoctorReferralInboxScreenState extends State<DoctorReferralInboxScreen> {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   List<ReferralRecord> _incoming = [];
+
+  void _openChatWithRequester(ReferralRecord referral) {
+    final requester = DoctorSummary(
+      id: referral.requestedById,
+      name: referral.requestedByName,
+      email: '',
+      role: 'NURSE',
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatThreadScreen(currentUser: widget.currentUser, peer: requester),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -206,6 +222,16 @@ class _DoctorReferralInboxScreenState extends State<DoctorReferralInboxScreen> {
                               ],
                             ),
                           ],
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: () => _openChatWithRequester(referral),
+                            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                            label: const Text('Hubungi Pengirim'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF1E88E5),
+                              side: const BorderSide(color: Color(0xFF1E88E5)),
+                            ),
+                          ),
                         ],
                       ),
                     );

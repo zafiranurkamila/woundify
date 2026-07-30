@@ -42,12 +42,23 @@ public class ChatService {
         return mapToResponse(chatRepository.save(message));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ChatMessageResponse> getConversation(User currentUser, UUID peerId) {
+        // Tandai pesan dari lawan bicara sebagai sudah dibaca saat percakapan dibuka
+        List<ChatMessage> unread = chatRepository.findBySenderIdAndRecipientIdAndReadFalse(peerId, currentUser.getId());
+        if (!unread.isEmpty()) {
+            unread.forEach(m -> m.setRead(true));
+            chatRepository.saveAll(unread);
+        }
         return chatRepository.findConversation(currentUser.getId(), peerId)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public long getUnreadCount(User currentUser) {
+        return chatRepository.countByRecipientIdAndReadFalse(currentUser.getId());
     }
 
     private ChatMessageResponse mapToResponse(ChatMessage m) {

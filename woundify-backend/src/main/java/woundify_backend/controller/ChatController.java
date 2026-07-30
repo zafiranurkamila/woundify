@@ -10,6 +10,7 @@ import woundify_backend.service.UserService;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -34,6 +35,11 @@ public class ChatController {
     public ResponseEntity<List<ChatMessageResponse>> conversation(@PathVariable UUID peerId, Principal principal) {
         User currentUser = resolveUser(principal);
         return ResponseEntity.ok(chatService.getConversation(currentUser, peerId));
+    }
+
+    @GetMapping("/unread")
+    public ResponseEntity<Map<String, Long>> unreadCount(Principal principal) {
+        return ResponseEntity.ok(Map.of("unread", chatService.getUnreadCount(resolveUser(principal))));
     }
 
     private User resolveUser(Principal principal) {

@@ -6,6 +6,7 @@ import '../api_service.dart';
 import '../models.dart';
 import '../utils/notification_helper.dart';
 import 'lab_input_screen.dart';
+import 'chat_thread_screen.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final Patient patient;
@@ -35,6 +36,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   List<WoundFollowUp> _followUps = [];
   bool _isSubmittingFollowUp = false;
 
+  bool get _isDoctor => widget.currentUser.role.toUpperCase() == 'DOCTOR';
   LabResult? get _latestLab => _labHistory.isEmpty ? null : _labHistory.first;
 
   @override
@@ -53,22 +55,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final results = await Future.wait(<Future<dynamic>>[
+      final futures = <Future<dynamic>>[
         _apiService.getPatientHistory(widget.patient.id),
         _apiService.getPatientReferrals(widget.patient.id),
         _apiService.getPatientFollowUps(widget.patient.id),
-        _apiService.getReferralTargets(),
-      ]);
+      ];
+      // Hanya non-dokter yang mengajukan rujukan, jadi hanya mereka yang butuh daftar dokter
+      if (!_isDoctor) {
+        futures.add(_apiService.getDoctors());
+      }
+
+      final results = await Future.wait(futures);
       if (!mounted) return;
 
       setState(() {
         _labHistory = results[0] as List<LabResult>;
         _referrals = results[1] as List<ReferralRecord>;
         _followUps = results[2] as List<WoundFollowUp>;
-        // Semua role bisa jadi tujuan rujukan; kecualikan diri sendiri
-        _doctors = (results[3] as List<DoctorSummary>)
-            .where((d) => d.id != widget.currentUser.id)
-            .toList();
+        _doctors = !_isDoctor && results.length > 3
+            ? results[3] as List<DoctorSummary>
+            : [];
       });
     } catch (e) {
       if (!mounted) return;
@@ -124,6 +130,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     return '$name — ${_roleLabel(target.role)}';
   }
 
+  void _openChatWithDoctor(ReferralRecord referral) {
+    final doctor = DoctorSummary(
+      id: referral.targetDoctorId,
+      name: referral.targetDoctorName,
+      email: referral.targetDoctorEmail,
+      role: 'DOCTOR',
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatThreadScreen(currentUser: widget.currentUser, peer: doctor),
+      ),
+    );
+  }
+
   Future<void> _openReferralDialog() async {
     if (_doctors.isEmpty) {
       NotificationHelper.warning(context, 'Dokter belum tersedia untuk dirujuk.', title: 'Tidak Ada Dokter');
@@ -166,7 +187,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Ajukan Rujukan',
+                    'Ajukan Rujukan ke Dokter',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -177,14 +198,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                   DropdownButtonFormField<DoctorSummary>(
                     value: selectedDoctor,
                     decoration: const InputDecoration(
-                      labelText: 'Tujuan Rujukan',
+                      labelText: 'Dokter Tujuan',
                       border: OutlineInputBorder(),
                     ),
                     items: _doctors
                         .map(
                           (doctor) => DropdownMenuItem<DoctorSummary>(
                             value: doctor,
-                            child: Text(_formatTargetLabel(doctor)),
+                            child: Text(_formatDoctorName(doctor.name)),
                           ),
                         )
                         .toList(),
@@ -986,15 +1007,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _isSubmittingReferral ? null : _openReferralDialog,
-            icon: const Icon(Icons.send_rounded),
-            label: const Text('Ajukan Rujukan'),
+        if (!_isDoctor)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSubmittingReferral ? null : _openReferralDialog,
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Ajukan Rujukan ke Dokter'),
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+        if (!_isDoctor) const SizedBox(height: 12),
         _buildWhiteCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1071,6 +1093,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                             color: Color(0xFF64748B),
                           ),
                         ),
+                        // Chat hanya tersedia setelah rujukan diajukan, dan hanya
+                        // antara pengaju rujukan dengan dokter tujuannya.
+                        if (referral.requestedById == widget.currentUser.id)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openChatWithDoctor(referral),
+                              icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                              label: const Text('Hubungi Dokter'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF1E88E5),
+                                side: const BorderSide(color: Color(0xFF1E88E5)),
+                              ),
+                            ),
+                          ),
                         if (referral.verificationNote.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 6),
