@@ -13,6 +13,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _strController = TextEditingController();
+  final _institutionController = TextEditingController();
   final _apiService = ApiService();
   bool _isLoading = false;
   String _selectedRole = 'NURSE';
@@ -32,6 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _nameController.dispose();
     _strController.dispose();
+    _institutionController.dispose();
     super.dispose();
   }
 
@@ -47,6 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _nameController.text,
         _selectedRole,
         strNumber: _selectedRole == 'DOCTOR' ? _strController.text.trim() : null,
+        institution: _institutionController.text.trim(),
       );
 
       if (!mounted) return;
@@ -157,6 +160,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
               ],
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _institutionController,
+                decoration: InputDecoration(
+                  labelText: 'Asal Instansi (RS / Klinik)',
+                  helperText: 'Data pasien hanya terlihat oleh sesama instansi ini',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.local_hospital_outlined),
+                ),
+                validator: (value) =>
+                    (value?.trim().isEmpty ?? true) ? 'Asal instansi wajib diisi' : null,
+              ),
               SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,

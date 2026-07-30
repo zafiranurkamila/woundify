@@ -36,16 +36,36 @@ public class PatientService {
         return mapToResponse(saved);
     }
 
-    public List<PatientResponse> getAllPatients() {
-        return patientRepository.findAll().stream()
+    /**
+     * Mengembalikan pasien milik instansi yang sama dengan pengguna. Data antar
+     * instansi (mis. RS A vs RS B) tidak saling terlihat.
+     */
+    public List<PatientResponse> getPatientsForUser(User user) {
+        String institution = user.getInstitution();
+        List<Patient> patients = (institution == null || institution.isBlank())
+                ? patientRepository.findByCreatedBy_InstitutionIsNull()
+                : patientRepository.findByCreatedBy_Institution(institution);
+        return patients.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
-    public PatientResponse getPatientById(UUID id) {
+    public PatientResponse getPatientById(UUID id, User user) {
         Patient patient = patientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Patient not found with id: " + id));
+        if (!sameInstitution(patient, user)) {
+            throw new RuntimeException("Data pasien ini milik instansi lain dan tidak dapat diakses.");
+        }
         return mapToResponse(patient);
+    }
+
+    private boolean sameInstitution(Patient patient, User user) {
+        String owner = patient.getCreatedBy().getInstitution();
+        String viewer = user.getInstitution();
+        if (owner == null || owner.isBlank()) {
+            return viewer == null || viewer.isBlank();
+        }
+        return owner.equals(viewer);
     }
 
     public Patient getPatientEntityById(UUID id) {

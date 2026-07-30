@@ -102,7 +102,7 @@ class ApiService {
     }
   }
 
-  Future<User> register(String email, String password, String name, String role, {String? strNumber}) async {
+  Future<User> register(String email, String password, String name, String role, {String? strNumber, String? institution}) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -112,6 +112,7 @@ class ApiService {
         'name': name,
         'role': role,
         if (strNumber != null && strNumber.isNotEmpty) 'strNumber': strNumber,
+        if (institution != null && institution.isNotEmpty) 'institution': institution,
       }),
     );
 

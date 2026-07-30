@@ -74,12 +74,15 @@ public class UserService implements UserDetailsService {
             strNumber = request.getStrNumber().trim();
         }
 
+        String institution = request.getInstitution() == null ? null : request.getInstitution().trim();
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .role(role)
                 .strNumber(strNumber)
+                .institution(institution != null && institution.isEmpty() ? null : institution)
                 .isVerified(false)
                 .build();
 

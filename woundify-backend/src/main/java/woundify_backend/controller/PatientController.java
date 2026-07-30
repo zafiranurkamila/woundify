@@ -25,21 +25,24 @@ public class PatientController {
 
     @PostMapping
     public ResponseEntity<PatientResponse> createPatient(@RequestBody PatientRequest request, Principal principal) {
-        if (principal == null) {
-            throw new RuntimeException("Sesi tidak valid. Silakan login ulang.");
-        }
-        User currentUser = userService.findByEmail(principal.getName())
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
-        return ResponseEntity.ok(patientService.createPatient(request, currentUser));
+        return ResponseEntity.ok(patientService.createPatient(request, resolveUser(principal)));
     }
 
     @GetMapping
-    public ResponseEntity<List<PatientResponse>> getAllPatients() {
-        return ResponseEntity.ok(patientService.getAllPatients());
+    public ResponseEntity<List<PatientResponse>> getAllPatients(Principal principal) {
+        return ResponseEntity.ok(patientService.getPatientsForUser(resolveUser(principal)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PatientResponse> getPatientById(@PathVariable UUID id) {
-        return ResponseEntity.ok(patientService.getPatientById(id));
+    public ResponseEntity<PatientResponse> getPatientById(@PathVariable UUID id, Principal principal) {
+        return ResponseEntity.ok(patientService.getPatientById(id, resolveUser(principal)));
+    }
+
+    private User resolveUser(Principal principal) {
+        if (principal == null) {
+            throw new RuntimeException("Sesi tidak valid. Silakan login ulang.");
+        }
+        return userService.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("Sesi tidak valid. Silakan login ulang."));
     }
 }

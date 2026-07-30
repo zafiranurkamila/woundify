@@ -40,6 +40,10 @@ public class User {
     @Column(name = "str_number")
     private String strNumber;
 
+    // Asal instansi (mis. nama rumah sakit/klinik) — dasar isolasi data antar-institusi
+    @Column(name = "institution")
+    private String institution;
+
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
