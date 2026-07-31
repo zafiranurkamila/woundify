@@ -31,7 +31,9 @@ public class ChatMessage {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "is_read", nullable = false)
+    // columnDefinition dengan default agar penambahan kolom pada tabel yang sudah
+    // berisi data (ddl-auto=update) tidak gagal karena NOT NULL tanpa default.
+    @Column(name = "is_read", columnDefinition = "boolean not null default false")
     private boolean read = false;
 
     @Column(name = "sent_at", nullable = false, updatable = false)
