@@ -13,6 +13,15 @@ class OcrExtractionResult(BaseModel):
     imvic_methyl_red: str = Field(description="POSITIVE or NEGATIVE")
     imvic_voges_proskauer: str = Field(description="POSITIVE or NEGATIVE")
     imvic_citrate: str = Field(description="POSITIVE or NEGATIVE")
+    macconkey: str = Field(default="NON_LACTOSE_FERMENTER", description="LACTOSE_FERMENTER or NON_LACTOSE_FERMENTER")
+    h2s: str = Field(default="NEGATIVE", description="H2S production: POSITIVE or NEGATIVE")
+    motil: str = Field(default="NEGATIVE", description="Motility: POSITIVE or NEGATIVE")
+    urease: str = Field(default="NEGATIVE", description="Urease: POSITIVE or NEGATIVE")
+    nas: str = Field(default="NEGATIVE", description="Growth on Nutrient Agar Slant: POSITIVE (grew) or NEGATIVE")
+    tsi: int = Field(default=3, description="TSI: 0=Acid/Acid+Gas, 1=Acid/Acid no gas, 2=Acid/Alkali H2S+, 3=Alkali/Alkali")
+    emb: int = Field(default=0, description="EMB: 0=Colorless, 1=Pink, 2=Green metallic sheen")
+    colony_texture: str = Field(default="", description="MUCOID or NON_MUCOID (empty if unknown)")
+    colony_size: str = Field(default="", description="SMALL, MEDIUM, or LARGE (empty if unknown)")
     colony_morphology: str = Field(description="Description of the bacteria colony morphology (e.g., circular, golden-yellow, beta-hemolytic, mucoid)")
     culture_result: str = Field(description="Summary of growth or identified culture")
     antibiotic_susceptibility: Dict[str, str] = Field(
@@ -44,12 +53,18 @@ def extract_lab_data_from_image(image_bytes: bytes, filename: str) -> OcrExtract
             You are an expert clinical microbiologist and OCR engine.
             Read the attached laboratory report and extract the following parameters:
             1. Gram Stain (GRAM_POSITIVE or GRAM_NEGATIVE) and bacterial cell shape.
-            2. IMViC test results: Indole, Methyl Red, Voges-Proskauer, and Citrate (each must be POSITIVE or NEGATIVE).
-            3. Colony Morphology observations.
-            4. Overall culture result (growth status or suspected organism).
-            5. Antibiotic susceptibility profile (list of antibiotics and their status: SUSCEPTIBLE, RESISTANT, or INTERMEDIATE).
-            
-            Ensure the output matches the requested JSON schema.
+            2. IMViC test results: Indole, Methyl Red, Voges-Proskauer, and Citrate (each POSITIVE or NEGATIVE).
+            3. MacConkey (LACTOSE_FERMENTER if pink/lactose-fermenting, else NON_LACTOSE_FERMENTER).
+            4. Additional biochemical tests, each POSITIVE or NEGATIVE: H2S, Motility (motil), Urease, and NAS
+               (growth on Nutrient Agar Slant; POSITIVE if it grew).
+            5. TSI as an integer: 0=Acid/Acid with gas, 1=Acid/Acid no gas, 2=Acid/Alkali with H2S (black),
+               3=Alkali/Alkali (non-fermenter).
+            6. EMB as an integer: 0=Colorless, 1=Pink, 2=Green metallic sheen.
+            7. Colony texture (MUCOID or NON_MUCOID) and colony size (SMALL, MEDIUM, or LARGE) if stated.
+            8. Colony morphology observations and the overall culture result (growth status or suspected organism).
+            9. Antibiotic susceptibility profile (antibiotic -> SUSCEPTIBLE, RESISTANT, or INTERMEDIATE).
+
+            If a value is not present in the report, use the schema default. Ensure the output matches the JSON schema.
             """
             
             response = client.models.generate_content(
@@ -87,6 +102,8 @@ def extract_lab_data_from_image(image_bytes: bytes, filename: str) -> OcrExtract
             imvic_methyl_red="POSITIVE",
             imvic_voges_proskauer="POSITIVE",
             imvic_citrate="NEGATIVE",
+            macconkey="NON_LACTOSE_FERMENTER", h2s="NEGATIVE", motil="NEGATIVE", urease="POSITIVE",
+            nas="POSITIVE", tsi=3, emb=0, colony_texture="NON_MUCOID", colony_size="MEDIUM",
             colony_morphology="Golden yellow colonies, circular, beta-hemolytic on blood agar",
             culture_result="Staphylococcus aureus isolated",
             antibiotic_susceptibility={
@@ -105,6 +122,8 @@ def extract_lab_data_from_image(image_bytes: bytes, filename: str) -> OcrExtract
             imvic_methyl_red="NEGATIVE",
             imvic_voges_proskauer="NEGATIVE",
             imvic_citrate="POSITIVE",
+            macconkey="NON_LACTOSE_FERMENTER", h2s="NEGATIVE", motil="POSITIVE", urease="POSITIVE",
+            nas="POSITIVE", tsi=3, emb=0, colony_texture="NON_MUCOID", colony_size="LARGE",
             colony_morphology="Large, flat, greenish colonies with grape-like sweet odor",
             culture_result="Pseudomonas aeruginosa isolated",
             antibiotic_susceptibility={
@@ -123,6 +142,8 @@ def extract_lab_data_from_image(image_bytes: bytes, filename: str) -> OcrExtract
             imvic_methyl_red="POSITIVE",
             imvic_voges_proskauer="NEGATIVE",
             imvic_citrate="NEGATIVE",
+            macconkey="LACTOSE_FERMENTER", h2s="NEGATIVE", motil="POSITIVE", urease="NEGATIVE",
+            nas="NEGATIVE", tsi=0, emb=2, colony_texture="NON_MUCOID", colony_size="MEDIUM",
             colony_morphology="Metallic green sheen on EMB agar, flat, pink colonies on MacConkey",
             culture_result="Escherichia coli isolated",
             antibiotic_susceptibility={
@@ -141,6 +162,8 @@ def extract_lab_data_from_image(image_bytes: bytes, filename: str) -> OcrExtract
             imvic_methyl_red="NEGATIVE",
             imvic_voges_proskauer="POSITIVE",
             imvic_citrate="POSITIVE",
+            macconkey="LACTOSE_FERMENTER", h2s="NEGATIVE", motil="NEGATIVE", urease="POSITIVE",
+            nas="NEGATIVE", tsi=0, emb=1, colony_texture="MUCOID", colony_size="LARGE",
             colony_morphology="Mucoid, lactose-fermenting large colonies on MacConkey agar",
             culture_result="Klebsiella pneumoniae isolated",
             antibiotic_susceptibility={
