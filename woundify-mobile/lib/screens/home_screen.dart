@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../api_service.dart';
@@ -48,22 +49,66 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int _unreadChat = 0;
+  Timer? _chatPoller;
 
   @override
   void initState() {
     super.initState();
     _fetchPatients();
     _fetchImpactSummary();
-    _fetchUnreadChat();
+    _fetchUnreadChat(initial: true);
+    // Cek pesan baru berkala agar penerima (mis. dokter) dapat alert
+    _chatPoller = Timer.periodic(const Duration(seconds: 15), (_) => _fetchUnreadChat());
   }
 
-  void _fetchUnreadChat() async {
+  @override
+  void dispose() {
+    _chatPoller?.cancel();
+    super.dispose();
+  }
+
+  void _fetchUnreadChat({bool initial = false}) async {
     try {
       final count = await _apiService.getUnreadChatCount();
-      if (mounted) setState(() => _unreadChat = count);
+      if (!mounted) return;
+      final increased = count > _unreadChat;
+      setState(() => _unreadChat = count);
+      // Munculkan alert pop-up saat ada pesan baru masuk (bukan saat pertama load)
+      if (!initial && increased && count > 0) {
+        _showNewMessageAlert(count);
+      }
     } catch (_) {
       // best-effort indicator
     }
+  }
+
+  void _showNewMessageAlert(int count) {
+    final isDoctor = widget.currentUser.role.toUpperCase() == 'DOCTOR';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF1E88E5),
+        duration: const Duration(seconds: 5),
+        content: Row(
+          children: [
+            const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text('$count pesan baru masuk', style: const TextStyle(color: Colors.white))),
+          ],
+        ),
+        action: isDoctor
+            ? SnackBarAction(
+                label: 'Lihat',
+                textColor: Colors.white,
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DoctorReferralInboxScreen(currentUser: widget.currentUser),
+                  ),
+                ),
+              )
+            : null,
+      ),
+    );
   }
 
   void _fetchPatients() async {
@@ -149,11 +194,26 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 14),
             if (_unreadChat > 0) ...[
-              _notifItem(
-                icon: Icons.chat_bubble_outline_rounded,
-                color: const Color(0xFF1E88E5),
-                title: '$_unreadChat pesan baru',
-                subtitle: 'Ada pesan masuk terkait rujukan. Buka rujukan pasien untuk membalas.',
+              GestureDetector(
+                onTap: widget.currentUser.role.toUpperCase() == 'DOCTOR'
+                    ? () {
+                        Navigator.pop(context); // tutup panel notifikasi
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DoctorReferralInboxScreen(currentUser: widget.currentUser),
+                          ),
+                        );
+                      }
+                    : null,
+                child: _notifItem(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  color: const Color(0xFF1E88E5),
+                  title: '$_unreadChat pesan baru',
+                  subtitle: widget.currentUser.role.toUpperCase() == 'DOCTOR'
+                      ? 'Ketuk untuk buka Rujukan Masuk lalu "Hubungi Pengirim".'
+                      : 'Ada pesan masuk terkait rujukan. Buka rujukan pasien untuk membalas.',
+                ),
               ),
               const SizedBox(height: 10),
             ],
@@ -330,6 +390,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // ── Feature Icon Grid ──
                     _buildFeatureGrid(),
+
+                    const SizedBox(height: 24),
+
+                    // ── Premium (coming soon) Banner ──
+                    _buildPremiumBanner(),
 
                     const SizedBox(height: 24),
 
@@ -631,6 +696,81 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Feature Icon Grid (4 columns, like Halodoc) ──
+  void _showPremiumDialog() {
+    _showInfoDialog(
+      'Paket Premium — Segera Hadir',
+      'Fitur premium yang sedang kami siapkan:\n\n'
+          '• Profiling pasien penuh & dashboard monitoring lanjutan\n'
+          '• Integrasi SIMRS / RME / LIS\n'
+          '• Akses API & laporan surveilans institusi\n'
+          '• Dukungan prioritas & pelatihan implementasi\n\n'
+          'Saat ini seluruh fitur inti dapat digunakan gratis. Paket premium akan hadir pada tahap pengembangan berikutnya.',
+    );
+  }
+
+  Widget _buildPremiumBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: _showPremiumDialog,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(color: Color(0x331565C0), blurRadius: 12, offset: Offset(0, 4)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('Paket Premium',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text('Segera Hadir',
+                              style: TextStyle(color: Color(0xFF1565C0), fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Akses penuh: integrasi SIMRS/RME, dashboard & laporan lanjutan',
+                        style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.3)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeatureGrid() {
     final isDoctor = widget.currentUser.role.toUpperCase() == 'DOCTOR';
     return Padding(
