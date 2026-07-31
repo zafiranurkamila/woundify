@@ -51,8 +51,10 @@ class _LabInputScreenState extends State<LabInputScreen> {
   bool _isLoading = false;
   bool _isOcrLoading = false;
 
+  // v2: draft lama (sebelum uji dimulai kosong) diabaikan agar tidak me-restore
+  // pilihan default "Negatif" yang lama.
   String get _draftKey =>
-      'lab_draft_${widget.preSelectedPatient?.id ?? 'general'}';
+      'lab_draft_v2_${widget.preSelectedPatient?.id ?? 'general'}';
 
   @override
   void initState() {
